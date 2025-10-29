@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { X, Save, Sparkles, FileText, Wand2 } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
@@ -17,6 +18,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedText, setSelectedText] = useState('')
+  const [mode, setMode] = useState<'write' | 'preview'>('write')
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -303,17 +305,62 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             )}
           </div>
 
-          {/* Editor */}
-          <div className="px-6 py-4">
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onSelect={handleTextSelect}
-              placeholder="Start writing..."
-              className="w-full h-96 bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-600 text-base leading-relaxed"
-            />
+          {/* Editor Mode Toggle */}
+          <div className="flex items-center justify-between px-6 pt-4">
+            <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <button
+                onClick={() => setMode('write')}
+                className={`px-3 py-1 text-sm ${mode === 'write' ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                aria-pressed={mode === 'write'}
+              >
+                Write
+              </button>
+              <button
+                onClick={() => setMode('preview')}
+                className={`px-3 py-1 text-sm ${mode === 'preview' ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                aria-pressed={mode === 'preview'}
+              >
+                Preview
+              </button>
+            </div>
           </div>
+
+          {/* Editor */}
+          {mode === 'write' ? (
+            <div className="px-6 py-4">
+              <textarea
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onSelect={handleTextSelect}
+                placeholder="Start writing..."
+                className="w-full h-96 bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-600 text-base leading-relaxed"
+              />
+            </div>
+          ) : (
+            <div className="px-6 py-4">
+              <div className="h-96 overflow-y-auto text-base leading-relaxed prose dark:prose-invert max-w-none">
+                <ReactMarkdown
+                  components={{
+                    // Style markdown elements
+                    strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>,
+                    em: ({ children }) => <em className="italic">{children}</em>,
+                    h1: ({ children }) => <h1 className="text-2xl font-bold mt-4 mb-2">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-xl font-bold mt-3 mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-lg font-bold mt-2 mb-1">{children}</h3>,
+                    ul: ({ children }) => <ul className="list-disc list-inside my-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
+                    li: ({ children }) => <li className="my-1">{children}</li>,
+                    p: ({ children }) => <p className="my-2">{children}</p>,
+                    code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
+                    a: ({ children, href }) => <a href={href} className="text-primary-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                  }}
+                >
+                  {content || '_Nothing to preview_'}
+                </ReactMarkdown>
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-6 py-4">
