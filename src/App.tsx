@@ -1,0 +1,122 @@
+import { useState } from 'react'
+import { Plus, Menu, Search, Settings } from 'lucide-react'
+
+function App() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // Listen for online/offline events
+  useState(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  })
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Header */}
+      <header className="glass border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <div className="flex items-center">
+              <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring">
+                <Menu className="w-6 h-6" />
+              </button>
+              <h1 className="ml-4 text-2xl font-bold text-gradient">
+                Momentum Notes
+              </h1>
+            </div>
+
+            {/* Status & Actions */}
+            <div className="flex items-center gap-4">
+              {/* Online/Offline Indicator */}
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+
+              <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring">
+                <Search className="w-5 h-5" />
+              </button>
+              <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring">
+                <Settings className="w-5 h-5" />
+              </button>
+              <button className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 focus-visible-ring flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                <span>New Note</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="text-center py-20">
+          <h2 className="text-4xl font-bold mb-4">
+            Welcome to Momentum Notes
+          </h2>
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-8">
+            The Frictionless AI Notebook. Capture Your Cognitive Momentum.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mt-12">
+            {/* Feature Cards */}
+            <div className="note-block p-6">
+              <div className="text-4xl mb-4">🚀</div>
+              <h3 className="text-lg font-semibold mb-2">Offline First</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Works completely offline. Your data stays on your device.
+              </p>
+            </div>
+
+            <div className="note-block p-6">
+              <div className="text-4xl mb-4">🤖</div>
+              <h3 className="text-lg font-semibold mb-2">AI-Powered</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                On-device AI with Gemini Nano. Fast, private, free.
+              </p>
+            </div>
+
+            <div className="note-block p-6">
+              <div className="text-4xl mb-4">🎨</div>
+              <h3 className="text-lg font-semibold mb-2">Visual Canvas</h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Organize notes like sticky notes on an infinite canvas.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-12">
+            <button className="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 focus-visible-ring text-lg font-semibold">
+              Get Started
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 dark:border-gray-800 mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center text-gray-600 dark:text-gray-400">
+            <p>Built with ❤️ by the Momentum team</p>
+            <p className="mt-2 text-sm">
+              Powered by Chrome Built-in AI • 100% Offline • Privacy First
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
+
+export default App
