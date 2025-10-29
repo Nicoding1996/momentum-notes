@@ -20,7 +20,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
-  const { status: aiStatus, expandText, summarizeText, improveWriting } = useChromeAI()
+  const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
 
   // Track unsaved changes
   useEffect(() => {
@@ -228,9 +228,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </button>
           </div>
 
-          {/* AI Toolbar */}
-          {aiStatus.available && (
-            <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-3">
+          {/* AI Toolbar / Status */}
+          <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-3">
+            {aiStatus.available ? (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-gray-500 mr-2">AI Tools:</span>
                 <button
@@ -264,8 +264,44 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   <span className="text-sm text-gray-500 animate-pulse">Processing...</span>
                 )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <div className="text-gray-500">
+                    AI tools unavailable. Ensure Chrome Built‑in AI is enabled. Origin: {location.origin}. Secure: {String(window.isSecureContext)}.
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        const result = await runDiagnosticProbe()
+                        alert(`Diagnostic Probe Results:\n\n${result}`)
+                      }}
+                      className="px-3 py-1 rounded bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/30"
+                      title="Test AI session creation directly"
+                    >
+                      Run Probe
+                    </button>
+                    <button
+                      onClick={refresh}
+                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      title="Re-check AI availability"
+                    >
+                      Re-check
+                    </button>
+                    <a
+                      href="chrome://flags/#prompt-api-for-gemini-nano"
+                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open Chrome flags"
+                    >
+                      Open flags
+                    </a>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Editor */}
           <div className="px-6 py-4">
