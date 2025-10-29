@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, FileText, Wand2 } from 'lucide-react'
+import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
+import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
 
 interface NoteEditorProps {
   note: Note
@@ -19,10 +20,38 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
+  const [interimTranscript, setInterimTranscript] = useState('')
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
+
+  // Voice transcription
+  const handleTranscript = (text: string, isFinal: boolean) => {
+    const trimmedText = text.trim()
+    if (!trimmedText) return
+
+    if (isFinal) {
+      // Append final transcript to content with proper spacing
+      setContent((prev) => {
+        const trimmedPrev = prev.trim()
+        if (!trimmedPrev) return trimmedText
+        // Add space between existing content and new text
+        return `${trimmedPrev} ${trimmedText}`
+      })
+      setInterimTranscript('')
+    } else {
+      // Show interim transcript
+      setInterimTranscript(trimmedText)
+    }
+  }
+
+  const { status: voiceStatus, toggleRecording } = useVoiceTranscription({
+    onTranscript: handleTranscript,
+    continuous: true,
+    interimResults: true,
+    language: 'en-US',
+  })
 
   // Track unsaved changes
   useEffect(() => {
@@ -262,6 +291,57 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   <Wand2 className="w-3 h-3" />
                   Improve
                 </button>
+                
+                {/* Voice Transcription Button */}
+                <div className="ml-auto flex items-center gap-2">
+                  {voiceStatus.supported ? (
+                    <>
+                      <button
+                        onClick={toggleRecording}
+                        disabled={aiLoading}
+                        className={`px-3 py-1 text-sm rounded flex items-center gap-1 transition-colors ${
+                          voiceStatus.isRecording
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30'
+                            : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={voiceStatus.isRecording ? 'Stop recording' : 'Start voice transcription'}
+                      >
+                        {voiceStatus.isRecording ? (
+                          <>
+                            <MicOff className="w-3 h-3" />
+                            Stop
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-3 h-3" />
+                            Record
+                          </>
+                        )}
+                      </button>
+                      {voiceStatus.isRecording && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-red-600 dark:text-red-400 animate-pulse flex items-center gap-1">
+                            <span className="inline-block w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></span>
+                            Listening
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            (Speak clearly into your microphone)
+                          </span>
+                        </div>
+                      )}
+                      {voiceStatus.error && !voiceStatus.isRecording && (
+                        <span className="text-xs text-red-600 dark:text-red-400" title={voiceStatus.error}>
+                          {voiceStatus.error}
+                        </span>
+                      )}
+                    </>
+                  ) : voiceStatus.error ? (
+                    <span className="text-xs text-amber-600 dark:text-amber-400" title={voiceStatus.error}>
+                      Voice: Not supported
+                    </span>
+                  ) : null}
+                </div>
+                
                 {aiLoading && (
                   <span className="text-sm text-gray-500 animate-pulse">Processing...</span>
                 )}
@@ -336,6 +416,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 placeholder="Start writing..."
                 className="w-full h-96 bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-600 text-base leading-relaxed"
               />
+              {voiceStatus.isRecording && (
+                <div className="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="inline-block w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></span>
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                      RECORDING - Speak now
+                    </span>
+                  </div>
+                  {interimTranscript ? (
+                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                      <span className="font-semibold">Recognizing: </span>
+                      <span className="italic">{interimTranscript}</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-blue-600 dark:text-blue-400 italic">
+                      Waiting for speech...
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <div className="px-6 py-4">
