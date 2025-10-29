@@ -4,4 +4,6 @@ export interface Note {
   content: string;
   createdAt: string; // ISO date
   updatedAt: string; // ISO date
+  x?: number; // Canvas x position
+  y?: number; // Canvas y position
 }

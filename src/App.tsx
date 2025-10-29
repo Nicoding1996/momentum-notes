@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Plus, Menu, Search, Settings, Trash2 } from 'lucide-react'
+import { Plus, Menu, Search, Settings, Trash2, Grid, List } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { db, seedIfEmpty } from '@/lib/db'
 import type { Note } from '@/types/note'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { NoteEditor } from '@/components/NoteEditor'
+import { CanvasView } from '@/components/CanvasView'
+import { SearchPanel } from '@/components/SearchPanel'
+
+type ViewMode = 'list' | 'canvas'
 
 function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [showSearch, setShowSearch] = useState(false)
 
   // Seed demo note on first load (dev)
   useEffect(() => {
@@ -33,7 +41,7 @@ function App() {
   }, [])
 
   const handleMenu = () => console.log('Menu clicked')
-  const handleSearch = () => alert('Search is coming soon')
+  const handleSearch = () => setShowSearch(true)
   const handleSettings = () => alert('Settings are coming soon')
 
   const handleNewNote = async () => {
@@ -60,6 +68,14 @@ function App() {
   const handleGetStarted = () => {
     const el = document.getElementById('notes-section')
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const openEditor = (note: Note) => {
+    setEditingNote(note)
+  }
+
+  const closeEditor = () => {
+    setEditingNote(null)
   }
 
   return (
@@ -151,41 +167,91 @@ function App() {
         <section id="notes-section" className="max-w-7xl mx-auto mt-10">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-semibold">Your Notes</h3>
-            <button onClick={handleNewNote} className="px-3 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 focus-visible-ring flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              New Note
-            </button>
+            <div className="flex items-center gap-3">
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded ${
+                    viewMode === 'list'
+                      ? 'bg-white dark:bg-gray-700 shadow'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                  } focus-visible-ring`}
+                  aria-label="List view"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('canvas')}
+                  className={`p-2 rounded ${
+                    viewMode === 'canvas'
+                      ? 'bg-white dark:bg-gray-700 shadow'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                  } focus-visible-ring`}
+                  aria-label="Canvas view"
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+              </div>
+              <button onClick={handleNewNote} className="px-3 py-2 bg-primary-500 text-white rounded-md hover:bg-primary-600 focus-visible-ring flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                New Note
+              </button>
+            </div>
           </div>
 
           {/* Empty state */}
           {!notes?.length && (
             <div className="note-block p-6 text-center text-gray-600 dark:text-gray-400">
-              No notes yet. Click “New Note” to create your first note.
+              No notes yet. Click "New Note" to create your first note.
             </div>
           )}
 
-          {/* Notes list */}
+          {/* Notes content based on view mode */}
           {!!notes?.length && (
-            <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {notes.map((n) => (
-                <li key={n.id} className="note-block p-4">
-                  <div className="flex items-start justify-between">
-                    <h4 className="font-semibold">{n.title || 'Untitled'}</h4>
-                    <button onClick={() => deleteNote(n.id)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring" aria-label="Delete note">
-                      <Trash2 className="w-4 h-4 text-gray-500" />
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {new Date(n.updatedAt).toLocaleString()}
-                  </p>
-                  {n.content && (
-                    <p className="text-gray-700 dark:text-gray-300 mt-2 line-clamp-3">
-                      {n.content}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <>
+              {viewMode === 'list' ? (
+                /* List View */
+                <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {notes.map((n) => (
+                    <li
+                      key={n.id}
+                      className="note-block p-4 cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => openEditor(n)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <h4 className="font-semibold">{n.title || 'Untitled'}</h4>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteNote(n.id)
+                          }}
+                          className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring"
+                          aria-label="Delete note"
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-500" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {new Date(n.updatedAt).toLocaleString()}
+                      </p>
+                      {n.content && (
+                        <p className="text-gray-700 dark:text-gray-300 mt-2 line-clamp-3">
+                          {n.content}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                /* Canvas View */
+                <CanvasView
+                  notes={notes}
+                  onEditNote={openEditor}
+                  onDeleteNote={deleteNote}
+                />
+              )}
+            </>
           )}
         </section>
       </main>
@@ -201,6 +267,21 @@ function App() {
           </div>
         </div>
       </footer>
+
+      {/* Note Editor Modal */}
+      {editingNote && (
+        <NoteEditor note={editingNote} onClose={closeEditor} />
+      )}
+
+      {/* Search Panel */}
+      {showSearch && (
+        <SearchPanel
+          onClose={() => setShowSearch(false)}
+          onSelectNote={(note) => {
+            setEditingNote(note)
+          }}
+        />
+      )}
     </div>
   )
 }
