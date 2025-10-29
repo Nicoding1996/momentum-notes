@@ -20,29 +20,42 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
-  const [interimTranscript, setInterimTranscript] = useState('')
+  const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
 
-  // Voice transcription
+  // Voice transcription - live updates with smart replacement
   const handleTranscript = (text: string, isFinal: boolean) => {
     const trimmedText = text.trim()
     if (!trimmedText) return
 
     if (isFinal) {
-      // Append final transcript to content with proper spacing
+      // Replace interim with final, or append if no interim
       setContent((prev) => {
-        const trimmedPrev = prev.trim()
-        if (!trimmedPrev) return trimmedText
-        // Add space between existing content and new text
-        return `${trimmedPrev} ${trimmedText}`
+        if (interimStartPosRef.current !== null) {
+          // Replace interim text with final
+          const beforeInterim = prev.substring(0, interimStartPosRef.current)
+          interimStartPosRef.current = null
+          return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
+        }
+        // No interim, just append
+        const prevTrim = prev.trim()
+        return prevTrim ? `${prevTrim} ${trimmedText}` : trimmedText
       })
-      setInterimTranscript('')
     } else {
-      // Show interim transcript
-      setInterimTranscript(trimmedText)
+      // Update interim text live in content
+      setContent((prev) => {
+        // Mark where interim starts on first interim result
+        if (interimStartPosRef.current === null) {
+          interimStartPosRef.current = prev.length
+        }
+        
+        // Replace old interim with new interim
+        const beforeInterim = prev.substring(0, interimStartPosRef.current)
+        return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
+      })
     }
   }
 
@@ -411,31 +424,17 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               <textarea
                 ref={textareaRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => {
+                  setContent(e.target.value)
+                  // Clear interim tracking if user manually edits
+                  if (interimStartPosRef.current !== null) {
+                    interimStartPosRef.current = null
+                  }
+                }}
                 onSelect={handleTextSelect}
                 placeholder="Start writing..."
                 className="w-full h-96 bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-600 text-base leading-relaxed"
               />
-              {voiceStatus.isRecording && (
-                <div className="mt-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="inline-block w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full animate-pulse"></span>
-                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">
-                      RECORDING - Speak now
-                    </span>
-                  </div>
-                  {interimTranscript ? (
-                    <div className="text-sm text-blue-700 dark:text-blue-300">
-                      <span className="font-semibold">Recognizing: </span>
-                      <span className="italic">{interimTranscript}</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-blue-600 dark:text-blue-400 italic">
-                      Waiting for speech...
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           ) : (
             <div className="px-6 py-4">
