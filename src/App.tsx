@@ -7,6 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { NoteEditor } from '@/components/NoteEditor'
 import { CanvasView } from '@/components/CanvasView'
 import { SearchPanel } from '@/components/SearchPanel'
+import { TagDisplay } from '@/components/ui/TagDisplay'
 
 type ViewMode = 'list' | 'canvas'
 
@@ -53,6 +54,7 @@ function App() {
       id,
       title: (title || 'Untitled note').trim(),
       content: '',
+      tags: [],
       createdAt: now,
       updatedAt: now,
     }
@@ -235,6 +237,11 @@ function App() {
                       <p className="text-sm text-gray-500 mt-1">
                         {new Date(n.updatedAt).toLocaleString()}
                       </p>
+                      {n.tags && n.tags.length > 0 && (
+                        <div className="mt-2">
+                          <TagDisplay tagIds={n.tags} maxDisplay={3} />
+                        </div>
+                      )}
                       {n.content && (
                         <p className="text-gray-700 dark:text-gray-300 mt-2 line-clamp-3">
                           {n.content}

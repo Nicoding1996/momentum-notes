@@ -25,6 +25,7 @@ import type { Note } from '@/types/note'
 import type { NoteEdge } from '@/types/edge'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
+import { TagDisplay } from '@/components/ui/TagDisplay'
 
 interface CanvasViewProps {
   notes: Note[]
@@ -87,6 +88,11 @@ function NoteNode({ data }: { data: any }) {
           </button>
         </div>
       </div>
+      {data.tags && data.tags.length > 0 && (
+        <div className="mb-2">
+          <TagDisplay tagIds={data.tags} maxDisplay={2} />
+        </div>
+      )}
       {data.content && (
         <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mt-2">
           {data.content}
@@ -123,6 +129,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         data: {
           title: note.title,
           content: note.content,
+          tags: note.tags,
           updatedAt: note.updatedAt,
           onEdit: () => onEditNote(note),
           onDelete: () => onDeleteNote(note.id),

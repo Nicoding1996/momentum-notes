@@ -5,6 +5,7 @@ import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
+import { TagInput } from '@/components/ui/TagInput'
 
 interface NoteEditorProps {
   note: Note
@@ -14,6 +15,7 @@ interface NoteEditorProps {
 export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title)
   const [content, setContent] = useState(note.content)
+  const [tags, setTags] = useState<string[]>(note.tags || [])
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
@@ -68,9 +70,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
   // Track unsaved changes
   useEffect(() => {
-    const changed = title !== note.title || content !== note.content
+    const changed = title !== note.title || content !== note.content ||
+                   JSON.stringify(tags) !== JSON.stringify(note.tags || [])
     setHasUnsavedChanges(changed)
-  }, [title, content, note.title, note.content])
+  }, [title, content, tags, note.title, note.content, note.tags])
 
   // Auto-save with debounce (2 seconds)
   useEffect(() => {
@@ -124,11 +127,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       ...note,
       title: title.trim() || 'Untitled',
       content: content,
+      tags: tags,
       updatedAt: now,
     }
 
     try {
-      await db.notes.update(note.id, updatedNote)
+      await db.notes.put(updatedNote)
       setHasUnsavedChanges(false)
       setLastSaved(new Date())
     } catch (error) {
@@ -253,23 +257,34 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-            <div className="flex-1 mr-4">
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Note title"
-                className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-600"
+          <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex-1 mr-4">
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Note title"
+                  className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-600"
+                />
+              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring"
+                aria-label="Close editor"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Tags Input */}
+            <div className="mt-3">
+              <TagInput
+                tags={tags}
+                onChange={setTags}
+                placeholder="Add tags..."
               />
             </div>
-            <button
-              onClick={handleClose}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring"
-              aria-label="Close editor"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
           {/* AI Toolbar / Status */}

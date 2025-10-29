@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, X, Calendar } from 'lucide-react'
+import { Search, X, Calendar, Hash } from 'lucide-react'
 import type { Note } from '@/types/note'
+import type { Tag } from '@/types/tag'
 import { db } from '@/lib/db'
+import { TagDisplay } from '@/components/ui/TagDisplay'
 
 interface SearchPanelProps {
   onClose: () => void
@@ -12,15 +14,19 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Note[]>([])
   const [allNotes, setAllNotes] = useState<Note[]>([])
+  const [allTags, setAllTags] = useState<Tag[]>([])
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null)
 
-  // Load all notes on mount
+  // Load all notes and tags on mount
   useEffect(() => {
-    const loadNotes = async () => {
+    const loadData = async () => {
       const notes = await db.notes.orderBy('updatedAt').reverse().toArray()
+      const tags = await db.tags.toArray()
       setAllNotes(notes)
+      setAllTags(tags)
     }
-    loadNotes()
+    loadData()
   }, [])
 
   // Fuzzy match algorithm
@@ -61,19 +67,34 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     }
   }
 
-  // Search with fuzzy matching
+  // Search with fuzzy matching including tags
   const searchResults = useMemo(() => {
-    if (!query.trim()) return allNotes.filter(filterByDate)
+    let filtered = allNotes.filter(filterByDate)
     
-    return allNotes.filter(note => {
-      if (!filterByDate(note)) return false
-      
-      const matchTitle = fuzzyMatch(note.title, query)
-      const matchContent = fuzzyMatch(note.content, query)
-      
-      return matchTitle || matchContent
-    })
-  }, [query, allNotes, dateFilter])
+    // Apply tag filter if selected
+    if (selectedTagFilter) {
+      filtered = filtered.filter(note => note.tags?.includes(selectedTagFilter))
+    }
+    
+    // Apply text search
+    if (query.trim()) {
+      filtered = filtered.filter(note => {
+        const matchTitle = fuzzyMatch(note.title, query)
+        const matchContent = fuzzyMatch(note.content, query)
+        
+        // Search tag names
+        let matchTag = false
+        if (note.tags && note.tags.length > 0) {
+          const noteTags = allTags.filter(tag => note.tags?.includes(tag.id))
+          matchTag = noteTags.some(tag => fuzzyMatch(tag.name, query))
+        }
+        
+        return matchTitle || matchContent || matchTag
+      })
+    }
+    
+    return filtered
+  }, [query, allNotes, allTags, dateFilter, selectedTagFilter])
 
   // Update results when search changes
   useEffect(() => {
@@ -153,23 +174,59 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
             </div>
             
             {/* Filters */}
-            <div className="flex items-center gap-2 mt-3">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <div className="flex gap-2">
-                {(['all', 'today', 'week', 'month'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setDateFilter(filter)}
-                    className={`px-3 py-1 text-sm rounded ${
-                      dateFilter === filter
-                        ? 'bg-primary-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {filter === 'all' ? 'All time' : filter === 'today' ? 'Today' : filter === 'week' ? 'This week' : 'This month'}
-                  </button>
-                ))}
+            <div className="space-y-2 mt-3">
+              {/* Date Filter */}
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div className="flex gap-2 flex-wrap">
+                  {(['all', 'today', 'week', 'month'] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setDateFilter(filter)}
+                      className={`px-3 py-1 text-sm rounded ${
+                        dateFilter === filter
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {filter === 'all' ? 'All time' : filter === 'today' ? 'Today' : filter === 'week' ? 'This week' : 'This month'}
+                    </button>
+                  ))}
+                </div>
               </div>
+              
+              {/* Tag Filter */}
+              {allTags.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-gray-400" />
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setSelectedTagFilter(null)}
+                      className={`px-3 py-1 text-sm rounded ${
+                        selectedTagFilter === null
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      All tags
+                    </button>
+                    {allTags.slice(0, 5).map((tag) => (
+                      <button
+                        key={tag.id}
+                        onClick={() => setSelectedTagFilter(tag.id)}
+                        className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
+                          selectedTagFilter === tag.id
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <Hash className="w-3 h-3" />
+                        {tag.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -196,6 +253,11 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                       {new Date(note.updatedAt).toLocaleString()}
                     </p>
+                    {note.tags && note.tags.length > 0 && (
+                      <div className="mb-2">
+                        <TagDisplay tagIds={note.tags} maxDisplay={3} />
+                      </div>
+                    )}
                     {note.content && (
                       <p className="text-sm text-gray-700 dark:text-gray-300">
                         {highlightText(getExcerpt(note.content, query), query)}
