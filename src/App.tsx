@@ -7,6 +7,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { NoteEditor } from '@/components/NoteEditor'
 import { CanvasView } from '@/components/CanvasView'
 import { SearchPanel } from '@/components/SearchPanel'
+import { SettingsModal } from '@/components/SettingsModal'
 import { TagDisplay } from '@/components/ui/TagDisplay'
 
 type ViewMode = 'list' | 'canvas'
@@ -16,6 +17,7 @@ function App() {
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [showSearch, setShowSearch] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   // Seed demo note on first load (dev)
   useEffect(() => {
@@ -43,7 +45,7 @@ function App() {
 
   const handleMenu = () => console.log('Menu clicked')
   const handleSearch = () => setShowSearch(true)
-  const handleSettings = () => alert('Settings are coming soon')
+  const handleSettings = () => setShowSettings(true)
 
   const handleNewNote = async () => {
     const title = prompt('Note title', 'Untitled note')
@@ -287,6 +289,11 @@ function App() {
             setEditingNote(note)
           }}
         />
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} />
       )}
     </div>
   )
