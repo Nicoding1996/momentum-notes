@@ -23,6 +23,11 @@ class NotesDB extends Dexie {
       edges: 'id, source, target, createdAt',
       tags: 'id, name, usageCount', // indexes for tag lookups
     });
+    this.version(4).stores({
+      notes: 'id, updatedAt, createdAt, *tags',
+      edges: 'id, source, target, createdAt, relationshipType', // added relationshipType index
+      tags: 'id, name, usageCount',
+    });
   }
 }
 

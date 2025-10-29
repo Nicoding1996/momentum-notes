@@ -12,17 +12,17 @@ import {
   NodeMouseHandler,
   NodeTypes,
   Connection,
-  addEdge,
   Handle,
   Position,
   ConnectionMode,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Trash2, Edit, Sparkles } from 'lucide-react'
+import { Trash2, Edit, Sparkles, Filter, X } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Note } from '@/types/note'
 import type { NoteEdge } from '@/types/edge'
+import { RELATIONSHIP_TYPES } from '@/types/edge'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { TagDisplay } from '@/components/ui/TagDisplay'
@@ -112,9 +112,18 @@ const nodeTypes: NodeTypes = {
 export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
+  const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
+  const [selectedRelationshipFilter, setSelectedRelationshipFilter] = useState<string>('all')
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
 
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
+  
+  // Filter edges based on selected relationship type
+  const filteredNoteEdges = useMemo(() => {
+    if (selectedRelationshipFilter === 'all') return noteEdges
+    return noteEdges.filter(edge => edge.relationshipType === selectedRelationshipFilter)
+  }, [noteEdges, selectedRelationshipFilter])
 
   // Convert notes to React Flow nodes
   const initialNodes: Node[] = useMemo(
@@ -138,22 +147,31 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     [notes, onEditNote, onDeleteNote]
   )
 
-  // Convert database edges to React Flow edges
+  // Convert database edges to React Flow edges with relationship type styling
   const initialEdges: Edge[] = useMemo(
     () =>
-      noteEdges.map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        animated: false, // Static for minimalist design
-        style: {
-          stroke: '#94a3b8',
-          strokeWidth: 1.5,
-        },
-        type: 'smoothstep',
-      })),
-    [noteEdges]
+      filteredNoteEdges.map((edge) => {
+        const relationshipType = edge.relationshipType
+          ? RELATIONSHIP_TYPES[edge.relationshipType as keyof typeof RELATIONSHIP_TYPES]
+          : null
+        
+        return {
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: relationshipType?.label || edge.label,
+          animated: false,
+          style: {
+            stroke: relationshipType?.color || '#94a3b8',
+            strokeWidth: 1.5,
+          },
+          type: 'smoothstep',
+          data: {
+            relationshipType: edge.relationshipType,
+          },
+        }
+      }),
+    [filteredNoteEdges]
   )
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
@@ -168,7 +186,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   // Update edges when database changes - CRITICAL for AI auto-link
   useEffect(() => {
     setEdges(initialEdges)
-  }, [noteEdges, setEdges, initialEdges])
+  }, [filteredNoteEdges, setEdges, initialEdges])
 
   // Handle edge selection
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
@@ -195,41 +213,42 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     []
   )
 
-  // Handle new connection created by user
+  // Handle new connection created by user - show relationship type modal
   const handleConnect = useCallback(
-    async (connection: Connection) => {
+    (connection: Connection) => {
       if (!connection.source || !connection.target) return
+      setPendingConnection(connection)
+    },
+    []
+  )
+
+  // Save connection with selected relationship type
+  const saveConnectionWithType = useCallback(
+    async (relationshipType: string) => {
+      if (!pendingConnection) return
 
       const edgeId = nanoid()
       const now = new Date().toISOString()
 
       try {
+        const relType = RELATIONSHIP_TYPES[relationshipType as keyof typeof RELATIONSHIP_TYPES]
+        
         // Save to database
         await db.edges.add({
           id: edgeId,
-          source: connection.source,
-          target: connection.target,
+          source: pendingConnection.source!,
+          target: pendingConnection.target!,
           createdAt: now,
+          relationshipType: relationshipType,
+          label: relType?.label,
         })
 
-        // Update UI
-        setEdges((eds) =>
-          addEdge(
-            {
-              ...connection,
-              id: edgeId,
-              animated: false,
-              style: { stroke: '#94a3b8', strokeWidth: 1.5 },
-              type: 'smoothstep',
-            },
-            eds
-          )
-        )
+        setPendingConnection(null)
       } catch (error) {
         console.error('Failed to save edge:', error)
       }
     },
-    [setEdges]
+    [pendingConnection]
   )
 
   // Delete an edge
@@ -258,7 +277,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         content: n.content.slice(0, 300),
       }))
 
-      // Use AI to find semantic relationships
+      // Use AI to find semantic relationships with relationship types
       const prompt = `Analyze these notes and identify semantic relationships between them.
 
 Notes:
@@ -269,18 +288,27 @@ IMPORTANT: In your response, use the EXACT Note ID values shown above (the strin
 Return a JSON array of connections. Each connection must have:
 - source: EXACT Note ID string from above (e.g., "${notes[0]?.id}")
 - target: EXACT Note ID string from above (e.g., "${notes[1]?.id}")
+- relationshipType: one of ["related-to", "depends-on", "part-of", "supports", "contradicts", "references"]
 - reason: very brief reason (max 5 words)
+
+Relationship types explained:
+- "related-to": General semantic relationship
+- "depends-on": Source depends on target
+- "part-of": Source is part of target
+- "supports": Source supports target's argument
+- "contradicts": Source contradicts target
+- "references": Source references target
 
 Only suggest 2-3 strong, clear semantic connections. Be selective.
 
 Example with REAL IDs:
-[{"source":"${notes[0]?.id}","target":"${notes[1]?.id}","reason":"Related topics"}]
+[{"source":"${notes[0]?.id}","target":"${notes[1]?.id}","relationshipType":"related-to","reason":"Similar topics"}]
 
 Return ONLY the JSON array, no other text:`
 
       const result = await generateText(
         prompt,
-        'You are a helpful assistant that analyzes notes and finds semantic relationships. You MUST use the exact Note ID strings provided. Always return valid JSON arrays.'
+        'You are a helpful assistant that analyzes notes and finds semantic relationships with specific relationship types. You MUST use the exact Note ID strings provided. Always return valid JSON arrays with relationshipType field.'
       )
 
       console.log('AI Response:', result)
@@ -339,15 +367,20 @@ Return ONLY the JSON array, no other text:`
 
         if (!existingEdge && !reverseEdge) {
           const edgeId = nanoid()
+          const relType = conn.relationshipType
+            ? RELATIONSHIP_TYPES[conn.relationshipType as keyof typeof RELATIONSHIP_TYPES]
+            : null
+            
           await db.edges.add({
             id: edgeId,
             source: conn.source,
             target: conn.target,
             createdAt: now,
-            label: conn.reason || undefined,
+            relationshipType: conn.relationshipType || 'related-to',
+            label: relType?.label || conn.reason || undefined,
           })
           addedCount++
-          console.log('Created connection:', conn.source, '->', conn.target)
+          console.log('Created connection:', conn.source, '->', conn.target, 'Type:', conn.relationshipType)
         }
       }
 
@@ -367,23 +400,86 @@ Return ONLY the JSON array, no other text:`
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         {/* Instructions */}
         <div className="text-sm text-gray-600 dark:text-gray-400">
           <p>💡 Hover over notes to see connection points • {selectedEdge ? <strong className="text-red-500">Press DELETE to remove selected line</strong> : 'Click a line to select it'}</p>
         </div>
         
-        {/* AI Auto-Link Button */}
-        {status.available && notes.length >= 2 && (
-          <button
-            onClick={handleAutoLink}
-            disabled={isAutoLinking}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
-            {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link Notes'}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Filter Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+              title="Filter by relationship type"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="text-sm">
+                {selectedRelationshipFilter === 'all'
+                  ? 'All Types'
+                  : RELATIONSHIP_TYPES[selectedRelationshipFilter as keyof typeof RELATIONSHIP_TYPES]?.label || 'All Types'}
+              </span>
+            </button>
+            
+            {showFilterDropdown && (
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setSelectedRelationshipFilter('all')
+                      setShowFilterDropdown(false)
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                      selectedRelationshipFilter === 'all'
+                        ? 'bg-blue-100 dark:bg-blue-900'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <div className="font-medium">All Types</div>
+                    <div className="text-xs text-gray-500">Show all connections</div>
+                  </button>
+                  
+                  {Object.values(RELATIONSHIP_TYPES).map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => {
+                        setSelectedRelationshipFilter(type.id)
+                        setShowFilterDropdown(false)
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                        selectedRelationshipFilter === type.id
+                          ? 'bg-blue-100 dark:bg-blue-900'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: type.color }}
+                        />
+                        <span className="font-medium">{type.label}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 ml-5">{type.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* AI Auto-Link Button */}
+          {status.available && notes.length >= 2 && (
+            <button
+              onClick={handleAutoLink}
+              disabled={isAutoLinking}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
+              {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link Notes'}
+            </button>
+          )}
+        </div>
       </div>
       
       <div className="w-full h-[600px] border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
@@ -428,6 +524,48 @@ Return ONLY the JSON array, no other text:`
           />
         </ReactFlow>
       </div>
+
+      {/* Relationship Type Selection Modal */}
+      {pendingConnection && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Select Relationship Type</h3>
+              <button
+                onClick={() => setPendingConnection(null)}
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Choose how these notes relate to each other:
+            </p>
+            
+            <div className="space-y-2">
+              {Object.values(RELATIONSHIP_TYPES).map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => saveConnectionWithType(type.id)}
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: type.color }}
+                    />
+                    <div>
+                      <div className="font-medium">{type.label}</div>
+                      <div className="text-sm text-gray-500">{type.description}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
