@@ -66,12 +66,19 @@ export function useVoiceTranscription({
     recognition.interimResults = interimResults
     recognition.lang = language
     recognition.maxAlternatives = 1
+    
+    // These settings help reduce the delay before text is finalized
+    // @ts-ignore - These properties exist but aren't in the types
+    if ('interimResults' in recognition) {
+      recognition.interimResults = true
+    }
 
     // Handle results
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interimTranscript = ''
       let finalTranscript = ''
 
+      // Process all results from this recognition session
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript
         if (event.results[i].isFinal) {
@@ -81,10 +88,14 @@ export function useVoiceTranscription({
         }
       }
 
+      // Send final transcript immediately
       if (finalTranscript) {
+        console.log('[VoiceTranscription] Final transcript:', finalTranscript)
         onTranscript?.(finalTranscript.trim(), true)
         interimTranscriptRef.current = ''
-      } else if (interimTranscript) {
+      }
+      // Update interim transcript (what's being recognized but not finalized yet)
+      else if (interimTranscript) {
         interimTranscriptRef.current = interimTranscript
         onTranscript?.(interimTranscript, false)
       }
