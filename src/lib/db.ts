@@ -1,14 +1,20 @@
 import Dexie, { Table } from 'dexie';
 import { nanoid } from 'nanoid';
 import type { Note } from '../types/note';
+import type { NoteEdge } from '../types/edge';
 
 class NotesDB extends Dexie {
   notes!: Table<Note, string>;
+  edges!: Table<NoteEdge, string>;
 
   constructor() {
     super('momentum_notes_db');
     this.version(1).stores({
       notes: 'id, updatedAt, createdAt', // indexes
+    });
+    this.version(2).stores({
+      notes: 'id, updatedAt, createdAt',
+      edges: 'id, source, target, createdAt', // indexes
     });
   }
 }
