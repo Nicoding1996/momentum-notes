@@ -270,18 +270,22 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
 
     setIsAutoLinking(true)
     try {
-      // Get all notes content - use actual IDs, not indices
+      // Get all notes content with tags - use actual IDs, not indices
+      const allTags = await db.tags.toArray()
+      const tagMap = new Map(allTags.map(tag => [tag.id, tag.name]))
+      
       const notesContext = notes.map((n) => ({
         id: n.id,
         title: n.title,
         content: n.content.slice(0, 300),
+        tags: n.tags?.map(tagId => tagMap.get(tagId)).filter(Boolean) || [],
       }))
 
-      // Use AI to find semantic relationships with relationship types
+      // Use AI to find semantic relationships with relationship types, considering tags
       const prompt = `Analyze these notes and identify semantic relationships between them.
 
 Notes:
-${notesContext.map((n) => `Note ID: "${n.id}"\nTitle: "${n.title}"\nContent: ${n.content}`).join('\n\n---\n\n')}
+${notesContext.map((n) => `Note ID: "${n.id}"\nTitle: "${n.title}"${n.tags.length > 0 ? `\nTags: ${n.tags.join(', ')}` : ''}\nContent: ${n.content}`).join('\n\n---\n\n')}
 
 IMPORTANT: In your response, use the EXACT Note ID values shown above (the strings in quotes after "Note ID:").
 
@@ -299,6 +303,12 @@ Relationship types explained:
 - "contradicts": Source contradicts target
 - "references": Source references target
 
+IMPORTANT: When analyzing relationships:
+1. Prioritize the content as the primary source of semantic meaning
+2. Use tags as strong signals to confirm or refine relationships
+3. Notes sharing the same tags are more likely to be related
+4. Consider tag overlap as a high-confidence indicator of connection
+
 Only suggest 2-3 strong, clear semantic connections. Be selective.
 
 Example with REAL IDs:
@@ -308,7 +318,7 @@ Return ONLY the JSON array, no other text:`
 
       const result = await generateText(
         prompt,
-        'You are a helpful assistant that analyzes notes and finds semantic relationships with specific relationship types. You MUST use the exact Note ID strings provided. Always return valid JSON arrays with relationshipType field.'
+        'You are a helpful assistant that analyzes notes and finds semantic relationships with specific relationship types. You MUST use the exact Note ID strings provided. Always return valid JSON arrays with relationshipType field. Pay special attention to tags as they provide strong signals about note relationships.'
       )
 
       console.log('AI Response:', result)

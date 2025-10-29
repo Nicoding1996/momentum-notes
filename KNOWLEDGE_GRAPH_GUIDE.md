@@ -33,12 +33,14 @@ Filter connections by relationship type to:
 - Reduce visual clutter
 - Analyze patterns in your knowledge graph
 
-### 4. **AI-Powered Auto-Linking**
+### 4. **AI-Powered Auto-Linking with Tag Intelligence**
 
 Enhanced AI capabilities now:
 - Automatically suggest appropriate relationship types
 - Analyze semantic meaning to determine relationships
+- **Consider note tags as strong signals for relationships**
 - Provide reasoning for each suggested connection
+- Prioritize content analysis while using tags to confirm connections
 
 ## 🎮 How to Use
 
@@ -54,11 +56,13 @@ Enhanced AI capabilities now:
 
 ### Using AI Auto-Link
 
-1. **Create multiple notes** with meaningful content
+1. **Create multiple notes** with meaningful content and tags
 2. **Click "AI Auto-Link Notes"** button
-3. **AI analyzes** semantic relationships AND relationship types
+3. **AI analyzes** semantic relationships, relationship types, AND tags
 4. **Review connections** - each has an appropriate type assigned
 5. **Delete unwanted** connections if needed
+
+**Pro Tip:** Add tags to your notes before using AI Auto-Link for even better results! Notes with shared tags are more likely to be connected with accurate relationship types.
 
 ### Filtering Connections
 
@@ -81,6 +85,8 @@ Enhanced AI capabilities now:
 ✅ **Filter by type** when working on specific aspects of your knowledge
 ✅ **Let AI suggest** types for existing connections
 ✅ **Review AI suggestions** before accepting
+✅ **Add tags** to notes before AI auto-linking for better accuracy
+✅ **Use consistent tagging** to help the AI understand your categories
 
 ### Don't:
 ❌ **Over-complicate** - not every connection needs a specific type
@@ -133,7 +139,15 @@ Defined in [`RELATIONSHIP_TYPES`](src/types/edge.ts:9) with:
 The AI auto-link feature now:
 - Receives relationship type options in the prompt
 - Analyzes semantic meaning to suggest appropriate types
+- **Incorporates note tags as high-confidence signals**
+- Prioritizes content but uses tags to confirm relationships
 - Returns structured JSON with `relationshipType` field
+
+**How Tags Improve AI Accuracy:**
+- Notes sharing tags are prioritized for connection
+- Tags help disambiguate similar content (e.g., "Jaguar" with #animal vs #car)
+- Tag overlap increases confidence in suggested relationships
+- Tags guide the AI to think more like the user's mental model
 
 ## 🚀 Advanced Usage
 
