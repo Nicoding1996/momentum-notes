@@ -127,8 +127,15 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       ...note,
       title: title.trim() || 'Untitled',
       content: content,
-      tags: tags,
       updatedAt: now,
+    }
+    
+    // Only include tags if there are any
+    if (tags.length > 0) {
+      updatedNote.tags = tags
+    } else {
+      // Remove tags property if empty
+      delete updatedNote.tags
     }
 
     try {

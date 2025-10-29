@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Hash } from 'lucide-react'
 import { db } from '@/lib/db'
 import type { Tag } from '@/types/tag'
 
@@ -36,9 +35,8 @@ export function TagDisplay({ tagIds, maxDisplay = 3, className = '' }: TagDispla
       {displayTags.map((tag) => (
         <span
           key={tag.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded"
+          className="inline-flex items-center px-2 py-0.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded"
         >
-          <Hash className="w-3 h-3" />
           {tag.name}
         </span>
       ))}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, X, Calendar, Hash } from 'lucide-react'
+import { Search, X, Calendar } from 'lucide-react'
 import type { Note } from '@/types/note'
 import type { Tag } from '@/types/tag'
 import { db } from '@/lib/db'
@@ -18,33 +18,84 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null)
 
+  // Recalculate tag usage counts based on actual notes
+  const recalculateTagUsage = async () => {
+    const notes = await db.notes.toArray()
+    const tags = await db.tags.toArray()
+    
+    // Count actual usage for each tag
+    const usageCounts = new Map<string, number>()
+    notes.forEach(note => {
+      if (note.tags && note.tags.length > 0) {
+        note.tags.forEach(tagId => {
+          usageCounts.set(tagId, (usageCounts.get(tagId) || 0) + 1)
+        })
+      }
+    })
+    
+    // Update or delete tags based on actual usage
+    for (const tag of tags) {
+      const actualCount = usageCounts.get(tag.id) || 0
+      
+      if (actualCount === 0) {
+        // Delete unused tags
+        await db.tags.delete(tag.id)
+      } else if (actualCount !== tag.usageCount) {
+        // Update incorrect counts
+        await db.tags.update(tag.id, { usageCount: actualCount })
+      }
+    }
+  }
+
   // Load all notes and tags on mount
   useEffect(() => {
     const loadData = async () => {
+      // First recalculate and cleanup tags
+      await recalculateTagUsage()
+      
+      // Then load the cleaned data
       const notes = await db.notes.orderBy('updatedAt').reverse().toArray()
       const tags = await db.tags.toArray()
+      
+      // Only show tags that are actually being used
+      const tagsInUse = tags.filter(tag => tag.usageCount > 0)
       setAllNotes(notes)
-      setAllTags(tags)
+      setAllTags(tagsInUse)
     }
     loadData()
   }, [])
 
-  // Fuzzy match algorithm
-  const fuzzyMatch = (text: string, pattern: string): boolean => {
+  // Enhanced search algorithm with scoring
+  const searchMatch = (text: string, pattern: string): number => {
     const textLower = text.toLowerCase()
     const patternLower = pattern.toLowerCase()
     
-    // Exact match
-    if (textLower.includes(patternLower)) return true
+    // Exact match gets highest score
+    if (textLower === patternLower) return 100
     
-    // Fuzzy matching - check if pattern characters appear in order
+    // Starts with pattern gets high score
+    if (textLower.startsWith(patternLower)) return 90
+    
+    // Contains whole pattern gets good score
+    if (textLower.includes(patternLower)) return 80
+    
+    // Word boundary match (pattern matches start of a word)
+    const words = textLower.split(/\s+/)
+    for (const word of words) {
+      if (word.startsWith(patternLower)) return 70
+      if (word.includes(patternLower)) return 60
+    }
+    
+    // Fuzzy matching - pattern characters appear in order
     let patternIdx = 0
     for (let i = 0; i < textLower.length && patternIdx < patternLower.length; i++) {
       if (textLower[i] === patternLower[patternIdx]) {
         patternIdx++
       }
     }
-    return patternIdx === patternLower.length
+    if (patternIdx === patternLower.length) return 40
+    
+    return 0
   }
 
   // Filter by date range
@@ -67,7 +118,7 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     }
   }
 
-  // Search with fuzzy matching including tags
+  // Search with enhanced scoring and ranking
   const searchResults = useMemo(() => {
     let filtered = allNotes.filter(filterByDate)
     
@@ -76,21 +127,26 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
       filtered = filtered.filter(note => note.tags?.includes(selectedTagFilter))
     }
     
-    // Apply text search
+    // Apply text search with scoring
     if (query.trim()) {
-      filtered = filtered.filter(note => {
-        const matchTitle = fuzzyMatch(note.title, query)
-        const matchContent = fuzzyMatch(note.content, query)
+      const scoredNotes = filtered.map(note => {
+        const titleScore = searchMatch(note.title, query)
+        const contentScore = searchMatch(note.content, query)
         
         // Search tag names
-        let matchTag = false
+        let tagScore = 0
         if (note.tags && note.tags.length > 0) {
           const noteTags = allTags.filter(tag => note.tags?.includes(tag.id))
-          matchTag = noteTags.some(tag => fuzzyMatch(tag.name, query))
+          tagScore = Math.max(...noteTags.map(tag => searchMatch(tag.name, query)), 0)
         }
         
-        return matchTitle || matchContent || matchTag
-      })
+        const maxScore = Math.max(titleScore, contentScore, tagScore)
+        return { note, score: maxScore }
+      }).filter(item => item.score > 0)
+      
+      // Sort by score (highest first)
+      scoredNotes.sort((a, b) => b.score - a.score)
+      return scoredNotes.map(item => item.note)
     }
     
     return filtered
@@ -174,19 +230,22 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
             </div>
             
             {/* Filters */}
-            <div className="space-y-2 mt-3">
+            <div className="space-y-3 mt-4">
               {/* Date Filter */}
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <div className="flex gap-2 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Date Range</span>
+                </div>
+                <div className="flex gap-2 flex-wrap ml-6">
                   {(['all', 'today', 'week', 'month'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setDateFilter(filter)}
-                      className={`px-3 py-1 text-sm rounded ${
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         dateFilter === filter
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
                       {filter === 'all' ? 'All time' : filter === 'today' ? 'Today' : filter === 'week' ? 'This week' : 'This month'}
@@ -197,30 +256,32 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
               
               {/* Tag Filter */}
               {allTags.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Hash className="w-4 h-4 text-gray-400" />
-                  <div className="flex gap-2 flex-wrap">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-4 h-4 flex items-center justify-center text-green-500 font-bold text-xs">#</span>
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Filter by Tags</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap ml-6">
                     <button
                       onClick={() => setSelectedTagFilter(null)}
-                      className={`px-3 py-1 text-sm rounded ${
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                         selectedTagFilter === null
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          ? 'bg-green-500 text-white shadow-sm'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
                       All tags
                     </button>
-                    {allTags.slice(0, 5).map((tag) => (
+                    {allTags.map((tag) => (
                       <button
                         key={tag.id}
                         onClick={() => setSelectedTagFilter(tag.id)}
-                        className={`px-3 py-1 text-sm rounded flex items-center gap-1 ${
+                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
                           selectedTagFilter === tag.id
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            ? 'bg-green-500 text-white shadow-sm'
+                            : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30'
                         }`}
                       >
-                        <Hash className="w-3 h-3" />
                         {tag.name}
                       </button>
                     ))}

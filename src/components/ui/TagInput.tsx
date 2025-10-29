@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Plus, Hash } from 'lucide-react'
+import { X, Plus } from 'lucide-react'
 import { db } from '@/lib/db'
 import { nanoid } from 'nanoid'
 import type { Tag } from '@/types/tag'
@@ -98,10 +98,18 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
   const removeTag = async (tagId: string) => {
     // Update tag usage count
     const tag = allTags.find((t) => t.id === tagId)
-    if (tag && tag.usageCount > 0) {
-      await db.tags.update(tagId, {
-        usageCount: tag.usageCount - 1,
-      })
+    if (tag) {
+      const newCount = tag.usageCount - 1
+      
+      if (newCount <= 0) {
+        // Delete tag if no longer used by any notes
+        await db.tags.delete(tagId)
+      } else {
+        // Update usage count
+        await db.tags.update(tagId, {
+          usageCount: newCount,
+        })
+      }
     }
 
     onChange(tags.filter((id) => id !== tagId))
@@ -157,7 +165,6 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
             key={tag.id}
             className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-md"
           >
-            <Hash className="w-3 h-3" />
             {tag.name}
             <button
               onClick={() => removeTag(tag.id)}
@@ -196,7 +203,6 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
               onClick={() => handleSuggestionClick(tag)}
               className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
             >
-              <Hash className="w-3 h-3 text-gray-400" />
               <span>{tag.name}</span>
               <span className="ml-auto text-xs text-gray-500">
                 {tag.usageCount} {tag.usageCount === 1 ? 'note' : 'notes'}

@@ -38,7 +38,6 @@ export async function seedIfEmpty() {
       id,
       title: 'Welcome to Momentum Notes',
       content: 'This is your first note. Edit me!',
-      tags: [],
       createdAt: now,
       updatedAt: now,
     });

@@ -54,7 +54,6 @@ function App() {
       id,
       title: (title || 'Untitled note').trim(),
       content: '',
-      tags: [],
       createdAt: now,
       updatedAt: now,
     }
