@@ -139,13 +139,12 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         source: edge.source,
         target: edge.target,
         label: edge.label,
-        animated: true,
-        style: { stroke: '#94a3b8', strokeWidth: 2 },
-        type: 'smoothstep',
-        markerEnd: {
-          type: 'arrowclosed' as const,
-          color: '#94a3b8',
+        animated: false, // Static for minimalist design
+        style: {
+          stroke: '#94a3b8',
+          strokeWidth: 1.5,
         },
+        type: 'smoothstep',
       })),
     [noteEdges]
   )
@@ -212,8 +211,9 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
             {
               ...connection,
               id: edgeId,
-              animated: true,
-              style: { stroke: '#94a3b8' },
+              animated: false,
+              style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+              type: 'smoothstep',
             },
             eds
           )
@@ -385,10 +385,11 @@ Return ONLY the JSON array, no other text:`
           edges={edges.map(edge => ({
             ...edge,
             selected: edge.id === selectedEdge,
+            animated: edge.id === selectedEdge, // Subtle animation only on selection
             style: {
               ...edge.style,
               stroke: edge.id === selectedEdge ? '#ef4444' : '#94a3b8',
-              strokeWidth: edge.id === selectedEdge ? 3 : 2,
+              strokeWidth: edge.id === selectedEdge ? 2.5 : 1.5,
             },
           }))}
           onNodesChange={onNodesChange}
@@ -406,7 +407,7 @@ Return ONLY the JSON array, no other text:`
           selectNodesOnDrag={false}
           connectionMode={ConnectionMode.Loose}
           defaultEdgeOptions={{
-            animated: true,
+            animated: false,
             type: 'smoothstep',
           }}
         >
