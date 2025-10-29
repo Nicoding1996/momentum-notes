@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['vite.svg'],
       manifest: {
         name: 'Momentum Notes',
         short_name: 'Momentum',
@@ -22,45 +22,13 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'pwa-64x64.png',
-            sizes: '64x64',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any'
-          },
-          {
-            src: 'maskable-icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable'
+            src: 'vite.svg',
+            sizes: 'any',
+            type: 'image/svg+xml'
           }
         ],
         categories: ['productivity', 'utilities', 'education'],
-        shortcuts: [
-          {
-            name: 'New Note',
-            short_name: 'New',
-            description: 'Create a new note',
-            url: '/new',
-            icons: [{ src: 'shortcut-new.png', sizes: '96x96' }]
-          },
-          {
-            name: 'Canvas',
-            short_name: 'Canvas',
-            description: 'Open canvas view',
-            url: '/canvas',
-            icons: [{ src: 'shortcut-canvas.png', sizes: '96x96' }]
-          }
-        ]
+        shortcuts: []
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
