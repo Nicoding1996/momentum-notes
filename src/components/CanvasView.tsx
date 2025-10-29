@@ -36,26 +36,30 @@ interface CanvasViewProps {
 function NoteNode({ data }: { data: any }) {
   return (
     <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[200px] max-w-[300px] relative group">
-      {/* Connection handles - only visible on hover, more subtle */}
+      {/* Connection handles - only visible on hover, more subtle with unique IDs */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Top}
-        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        id="top"
+        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
       />
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        id="bottom"
+        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
       />
       <Handle
-        type="target"
+        type="source"
         position={Position.Left}
-        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        id="left"
+        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        id="right"
+        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
       />
       
       <div className="flex items-start justify-between mb-2">
@@ -136,22 +140,39 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         target: edge.target,
         label: edge.label,
         animated: true,
-        style: { stroke: '#94a3b8' },
+        style: { stroke: '#94a3b8', strokeWidth: 2 },
+        type: 'smoothstep',
+        markerEnd: {
+          type: 'arrowclosed' as const,
+          color: '#94a3b8',
+        },
       })),
     [noteEdges]
   )
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges)
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
 
-  // Update nodes and edges when data changes
+  // Update nodes when data changes
   useEffect(() => {
     setNodes(initialNodes)
   }, [initialNodes, setNodes])
 
+  // Update edges when database changes - CRITICAL for AI auto-link
   useEffect(() => {
     setEdges(initialEdges)
-  }, [initialEdges, setEdges])
+  }, [noteEdges, setEdges, initialEdges])
+
+  // Handle edge selection
+  const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelectedEdge(edge.id)
+  }, [])
+
+  // Clear selection when clicking canvas
+  const handlePaneClick = useCallback(() => {
+    setSelectedEdge(null)
+  }, [])
 
   // Save node position to database
   const handleNodeDragStop: NodeMouseHandler = useCallback(
@@ -223,9 +244,8 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
 
     setIsAutoLinking(true)
     try {
-      // Get all notes content
-      const notesContext = notes.map((n, idx) => ({
-        index: idx,
+      // Get all notes content - use actual IDs, not indices
+      const notesContext = notes.map((n) => ({
         id: n.id,
         title: n.title,
         content: n.content.slice(0, 300),
@@ -235,23 +255,25 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
       const prompt = `Analyze these notes and identify semantic relationships between them.
 
 Notes:
-${notesContext.map((n) => `[${n.index}] ID: ${n.id}\nTitle: ${n.title}\nContent: ${n.content}`).join('\n\n')}
+${notesContext.map((n) => `Note ID: "${n.id}"\nTitle: "${n.title}"\nContent: ${n.content}`).join('\n\n---\n\n')}
 
-Return a JSON array of connections. Each connection should have:
-- source: the ID of the first note
-- target: the ID of the second note
-- reason: a very brief reason (max 5 words)
+IMPORTANT: In your response, use the EXACT Note ID values shown above (the strings in quotes after "Note ID:").
 
-Only suggest strong, clear semantic connections. Be selective.
+Return a JSON array of connections. Each connection must have:
+- source: EXACT Note ID string from above (e.g., "${notes[0]?.id}")
+- target: EXACT Note ID string from above (e.g., "${notes[1]?.id}")
+- reason: very brief reason (max 5 words)
 
-Example format:
-[{"source":"abc123","target":"def456","reason":"Both about coding"}]
+Only suggest 2-3 strong, clear semantic connections. Be selective.
 
-Return ONLY the JSON array, nothing else:`
+Example with REAL IDs:
+[{"source":"${notes[0]?.id}","target":"${notes[1]?.id}","reason":"Related topics"}]
+
+Return ONLY the JSON array, no other text:`
 
       const result = await generateText(
         prompt,
-        'You are a helpful assistant that analyzes notes and finds semantic relationships. You always return valid JSON arrays.'
+        'You are a helpful assistant that analyzes notes and finds semantic relationships. You MUST use the exact Note ID strings provided. Always return valid JSON arrays.'
       )
 
       console.log('AI Response:', result)
@@ -280,9 +302,20 @@ Return ONLY the JSON array, nothing else:`
       const now = new Date().toISOString()
       let addedCount = 0
 
-      // Create edges for new connections
+      // Validate and create edges for new connections
+      const validNoteIds = new Set(notes.map(n => n.id))
+      
       for (const conn of connections) {
-        if (!conn.source || !conn.target) continue
+        if (!conn.source || !conn.target) {
+          console.warn('Skipping connection with missing source or target:', conn)
+          continue
+        }
+
+        // Validate that both IDs exist in our notes
+        if (!validNoteIds.has(conn.source) || !validNoteIds.has(conn.target)) {
+          console.warn('Skipping connection with invalid IDs:', conn, 'Valid IDs:', Array.from(validNoteIds))
+          continue
+        }
 
         // Check if edge already exists (in either direction)
         const existingEdge = await db.edges
@@ -307,6 +340,7 @@ Return ONLY the JSON array, nothing else:`
             label: conn.reason || undefined,
           })
           addedCount++
+          console.log('Created connection:', conn.source, '->', conn.target)
         }
       }
 
@@ -326,9 +360,14 @@ Return ONLY the JSON array, nothing else:`
 
   return (
     <div className="space-y-2">
-      {/* AI Auto-Link Button */}
-      {status.available && notes.length >= 2 && (
-        <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        {/* Instructions */}
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          <p>💡 Hover over notes to see connection points • {selectedEdge ? <strong className="text-red-500">Press DELETE to remove selected line</strong> : 'Click a line to select it'}</p>
+        </div>
+        
+        {/* AI Auto-Link Button */}
+        {status.available && notes.length >= 2 && (
           <button
             onClick={handleAutoLink}
             disabled={isAutoLinking}
@@ -337,17 +376,28 @@ Return ONLY the JSON array, nothing else:`
             <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
             {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link Notes'}
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      
       <div className="w-full h-[600px] border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
         <ReactFlow
           nodes={nodes}
-          edges={edges}
+          edges={edges.map(edge => ({
+            ...edge,
+            selected: edge.id === selectedEdge,
+            style: {
+              ...edge.style,
+              stroke: edge.id === selectedEdge ? '#ef4444' : '#94a3b8',
+              strokeWidth: edge.id === selectedEdge ? 3 : 2,
+            },
+          }))}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
           onConnect={handleConnect}
           onEdgesDelete={handleEdgeDelete}
+          onEdgeClick={handleEdgeClick}
+          onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
           minZoom={0.2}
@@ -355,11 +405,8 @@ Return ONLY the JSON array, nothing else:`
           deleteKeyCode="Delete"
           selectNodesOnDrag={false}
           connectionMode={ConnectionMode.Loose}
-          snapToGrid={true}
-          snapGrid={[15, 15]}
           defaultEdgeOptions={{
             animated: true,
-            style: { stroke: '#94a3b8', strokeWidth: 2 },
             type: 'smoothstep',
           }}
         >
