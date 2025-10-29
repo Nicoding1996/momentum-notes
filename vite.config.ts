@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['vite.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-icon-512x512.png'],
       manifest: {
         name: 'Momentum Notes',
         short_name: 'Momentum',
@@ -22,13 +22,30 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: 'vite.svg',
-            sizes: 'any',
-            type: 'image/svg+xml'
-          }
+            src: 'pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: 'maskable-icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
         categories: ['productivity', 'utilities', 'education'],
-        shortcuts: []
+        shortcuts: [
+          {
+            name: 'New Note',
+            url: '/?action=new-note',
+            description: 'Create a new note',
+          },
+        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

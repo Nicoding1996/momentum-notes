@@ -24,6 +24,16 @@ function App() {
     seedIfEmpty().catch(console.error)
   }, [])
 
+  // Handle PWA shortcut for new note
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('action') === 'new-note') {
+      handleNewNote()
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+ 
   // Reactive notes list from IndexedDB
   const notes = useLiveQuery(async () => {
     return db.notes.orderBy('updatedAt').reverse().toArray()
@@ -48,18 +58,17 @@ function App() {
   const handleSettings = () => setShowSettings(true)
 
   const handleNewNote = async () => {
-    const title = prompt('Note title', 'Untitled note')
-    if (title === null) return
     const id = nanoid()
     const now = new Date().toISOString()
-    const note: Note = {
+    const newNote: Note = {
       id,
-      title: (title || 'Untitled note').trim(),
+      title: 'Untitled Note',
       content: '',
       createdAt: now,
       updatedAt: now,
     }
-    await db.notes.add(note)
+    await db.notes.add(newNote)
+    setEditingNote(newNote) // Immediately open the new note in the editor
   }
 
   const deleteNote = async (id: string) => {

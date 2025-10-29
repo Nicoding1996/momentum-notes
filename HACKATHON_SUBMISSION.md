@@ -172,13 +172,13 @@ The demo video should showcase:
 
 ### For Judges
 ```bash
-git clone https://github.com/yourusername/momentum-notes.git
+git clone https://github.com/Nicoding1996/momentum-notes.git
 cd momentum-notes
 npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` in Chrome 128+ (Dev/Canary recommended)
+Open `http://localhost:3000` in **Chrome 128+** (Dev or Canary recommended for full API support)
 
 ### Chrome Setup Required
 1. Enable flags at `chrome://flags`:
@@ -213,9 +213,9 @@ If native Writer/Summarizer APIs are unavailable, the app automatically uses the
 
 ## Project Links
 
-- **Repository**: [https://github.com/yourusername/momentum-notes](https://github.com/yourusername/momentum-notes)
-- **Demo Video**: [YouTube link]
-- **Live Demo**: [Deployed URL]
+- **Repository**: [https://github.com/Nicoding1996/momentum-notes](https://github.com/Nicoding1996/momentum-notes)
+- **Demo Video**: [To be added]
+- **Live Demo**: [To be deployed]
 
 ## License
 
