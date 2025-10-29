@@ -15,6 +15,7 @@ import {
   addEdge,
   Handle,
   Position,
+  ConnectionMode,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Trash2, Edit, Sparkles } from 'lucide-react'
@@ -34,12 +35,28 @@ interface CanvasViewProps {
 // Custom Note Node Component with connection handles
 function NoteNode({ data }: { data: any }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[200px] max-w-[300px] relative">
-      {/* Connection handles on all sides */}
-      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-blue-500" />
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-blue-500" />
-      <Handle type="target" position={Position.Left} className="w-3 h-3 !bg-blue-500" />
-      <Handle type="source" position={Position.Right} className="w-3 h-3 !bg-blue-500" />
+    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[200px] max-w-[300px] relative group">
+      {/* Connection handles - only visible on hover, more subtle */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-2 h-2 !bg-gray-400 dark:!bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800"
+      />
       
       <div className="flex items-start justify-between mb-2">
         <h4 className="font-semibold text-sm line-clamp-2">{data.title || 'Untitled'}</h4>
@@ -207,55 +224,101 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     setIsAutoLinking(true)
     try {
       // Get all notes content
-      const notesContext = notes.map((n) => ({
+      const notesContext = notes.map((n, idx) => ({
+        index: idx,
         id: n.id,
         title: n.title,
-        content: n.content,
+        content: n.content.slice(0, 300),
       }))
 
       // Use AI to find semantic relationships
-      const prompt = `Analyze these notes and identify which notes are semantically related. Return ONLY a JSON array of connections in this format: [{"source": "noteId1", "target": "noteId2", "reason": "brief reason"}]. Be selective - only suggest strong semantic connections.
+      const prompt = `Analyze these notes and identify semantic relationships between them.
 
 Notes:
-${notesContext.map((n) => `ID: ${n.id}\nTitle: ${n.title}\nContent: ${n.content.slice(0, 200)}...`).join('\n\n')}`
+${notesContext.map((n) => `[${n.index}] ID: ${n.id}\nTitle: ${n.title}\nContent: ${n.content}`).join('\n\n')}
+
+Return a JSON array of connections. Each connection should have:
+- source: the ID of the first note
+- target: the ID of the second note
+- reason: a very brief reason (max 5 words)
+
+Only suggest strong, clear semantic connections. Be selective.
+
+Example format:
+[{"source":"abc123","target":"def456","reason":"Both about coding"}]
+
+Return ONLY the JSON array, nothing else:`
 
       const result = await generateText(
         prompt,
-        'You are an AI that finds semantic relationships between notes. Return only valid JSON.'
+        'You are a helpful assistant that analyzes notes and finds semantic relationships. You always return valid JSON arrays.'
       )
 
-      // Parse AI response
-      const jsonMatch = result.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) {
-        console.warn('No valid JSON found in AI response')
+      console.log('AI Response:', result)
+
+      // Try to extract JSON from response
+      let connections = []
+      try {
+        // First try direct parse
+        connections = JSON.parse(result.trim())
+      } catch {
+        // Try to find JSON array in the response
+        const jsonMatch = result.match(/\[\s*{[\s\S]*}\s*\]/)
+        if (jsonMatch) {
+          connections = JSON.parse(jsonMatch[0])
+        } else {
+          throw new Error('No valid JSON array found in response')
+        }
+      }
+
+      if (!Array.isArray(connections) || connections.length === 0) {
+        console.log('No connections suggested by AI')
+        alert('AI found no strong semantic connections between these notes.')
         return
       }
 
-      const connections = JSON.parse(jsonMatch[0])
       const now = new Date().toISOString()
+      let addedCount = 0
 
       // Create edges for new connections
       for (const conn of connections) {
-        // Check if edge already exists
+        if (!conn.source || !conn.target) continue
+
+        // Check if edge already exists (in either direction)
         const existingEdge = await db.edges
-          .where('[source+target]')
-          .equals([conn.source, conn.target])
+          .where('source')
+          .equals(conn.source)
+          .and(e => e.target === conn.target)
           .first()
 
-        if (!existingEdge) {
+        const reverseEdge = await db.edges
+          .where('source')
+          .equals(conn.target)
+          .and(e => e.target === conn.source)
+          .first()
+
+        if (!existingEdge && !reverseEdge) {
           const edgeId = nanoid()
           await db.edges.add({
             id: edgeId,
             source: conn.source,
             target: conn.target,
             createdAt: now,
-            label: conn.reason,
+            label: conn.reason || undefined,
           })
+          addedCount++
         }
+      }
+
+      if (addedCount > 0) {
+        alert(`Successfully created ${addedCount} connection${addedCount > 1 ? 's' : ''}!`)
+      } else {
+        alert('All suggested connections already exist.')
       }
     } catch (error) {
       console.error('Auto-link failed:', error)
-      alert('Failed to auto-link notes. Please try again.')
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      alert(`Failed to auto-link notes: ${errorMsg}\n\nPlease try again.`)
     } finally {
       setIsAutoLinking(false)
     }
@@ -289,9 +352,15 @@ ${notesContext.map((n) => `ID: ${n.id}\nTitle: ${n.title}\nContent: ${n.content.
           fitView
           minZoom={0.2}
           maxZoom={2}
+          deleteKeyCode="Delete"
+          selectNodesOnDrag={false}
+          connectionMode={ConnectionMode.Loose}
+          snapToGrid={true}
+          snapGrid={[15, 15]}
           defaultEdgeOptions={{
             animated: true,
-            style: { stroke: '#94a3b8' },
+            style: { stroke: '#94a3b8', strokeWidth: 2 },
+            type: 'smoothstep',
           }}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
