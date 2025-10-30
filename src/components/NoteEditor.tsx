@@ -307,6 +307,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             {isAIChatVisible && (
               <div className="w-[380px] min-w-[340px] max-w-[420px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                 <AIChatPanel
+                  key={note.id}
                   note={{ ...note, title, content, tags }}
                   onReplaceContent={handleReplaceContent}
                   onInsertContent={handleInsertContent}

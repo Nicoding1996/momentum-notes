@@ -86,6 +86,35 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
     inputRef.current?.focus()
   }
 
+  // Strip conversational filler and conversation history from content before adding to note
+  const stripFillerText = (content: string): string => {
+    // First, remove the entire conversation history block if it exists
+    // This pattern looks for "Recent Conversation:" and removes everything up to the actual content
+    const historyPattern = /^\s*\*\*?Recent Conversation:\*\*?\s*[\s\S]*?(USER:|ASSISTANT:)[\s\S]*?(\n\n|\r\n\r\n)/i
+    let cleanedContent = content.replace(historyPattern, '')
+
+    // Then, remove common conversational filler phrases from the beginning of the text
+    const fillerPatterns = [
+      /^Here are some .+?:\s*/i,
+      /^Here's .+?:\s*/i,
+      /^Here is .+?:\s*/i,
+      /^I've .+?:\s*/i,
+      /^I have .+?:\s*/i,
+      /^Below .+?:\s*/i,
+      /^The following .+?:\s*/i,
+      /^This is .+?:\s*/i,
+      /^These are .+?:\s*/i,
+      /^Of course, .+?:\s*/i,
+      /^Certainly, .+?:\s*/i,
+    ]
+    
+    fillerPatterns.forEach(pattern => {
+      cleanedContent = cleanedContent.replace(pattern, '')
+    })
+    
+    return cleanedContent.trim()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isProcessing) return
@@ -128,12 +157,16 @@ TASK: Analyze the user's request (considering the conversation history if presen
    - INFO: User is asking a question or needs explanation (no content changes)
 2. Following lines: Provide the content to fulfill the request
 
-IMPORTANT CONTEXT RULES:
+CRITICAL FORMATTING RULES:
+- For REPLACE: Provide ONLY the modified note content. NO explanations, NO "Here's the...", NO preambles.
+- For ADD: Provide ONLY the new content to add. NO explanations, NO "Here's the content...", NO introductions.
+- Start immediately with the actual content the user requested.
+- For INFO: You may be conversational and friendly.
+
+CONTEXT RULES:
 - If user says "add it" or "insert that" or uses pronouns referring to previous content, use the content from the recent conversation
 - If user asks for new content, generate new content
-- For REPLACE: Provide ONLY the modified version of the entire note content
-- For ADD: Provide ONLY new content to be added (formatted and ready to insert) - if referring to previous conversation, use that content
-- For INFO: Provide a helpful conversational response
+- If referring to previous conversation content, provide that content directly without any wrapper text
 
 Begin your response now:`
 
@@ -268,7 +301,7 @@ Begin your response now:`
                   {/* Replace Content - Only for REPLACE intent */}
                   {message.intent === 'REPLACE' && (
                     <button
-                      onClick={() => onReplaceContent(message.content)}
+                      onClick={() => onReplaceContent(stripFillerText(message.content))}
                       className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
                     >
                       Replace Content
@@ -277,7 +310,7 @@ Begin your response now:`
                   
                   {/* Copy - Always available for actionable messages */}
                   <button
-                    onClick={() => handleCopy(message.content, index)}
+                    onClick={() => handleCopy(stripFillerText(message.content), index)}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1"
                     title="Copy to clipboard"
                   >
@@ -296,7 +329,7 @@ Begin your response now:`
                   
                   {/* Add to Note - Always available for actionable messages */}
                   <button
-                    onClick={() => onInsertContent(message.content)}
+                    onClick={() => onInsertContent(stripFillerText(message.content))}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
                     title="Add content to your note"
                   >
