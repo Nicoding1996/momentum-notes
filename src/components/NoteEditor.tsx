@@ -583,7 +583,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 className="w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100"
               />
             ) : (
-              <div className="h-full min-h-[500px] overflow-y-auto custom-scrollbar">
+              <div className="min-h-[500px]">
                 <div className="prose-custom">
                   <ReactMarkdown
                     components={{
