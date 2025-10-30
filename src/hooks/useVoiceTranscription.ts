@@ -32,6 +32,8 @@ export function useVoiceTranscription({
 
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const interimTranscriptRef = useRef<string>('')
+  const shouldBeRecordingRef = useRef<boolean>(false)
+  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Check browser support on mount
   useEffect(() => {
@@ -146,20 +148,37 @@ export function useVoiceTranscription({
     recognition.onend = () => {
       console.log('[VoiceTranscription] Recognition ended')
       
-      // If we're still supposed to be recording, restart automatically
-      // This handles cases where recognition stops due to silence
-      if (recognitionRef.current) {
-        console.log('[VoiceTranscription] Auto-restarting recognition...')
-        try {
-          recognition.start()
-        } catch (error) {
-          console.error('[VoiceTranscription] Failed to restart:', error)
-          setStatus((prev) => ({
-            ...prev,
-            isRecording: false,
-          }))
-          recognitionRef.current = null
+      // If we're still supposed to be recording, restart automatically after a short delay
+      // This handles cases where recognition stops due to silence or pauses
+      if (shouldBeRecordingRef.current && recognitionRef.current) {
+        console.log('[VoiceTranscription] Auto-restarting recognition after pause...')
+        
+        // Clear any existing restart timeout
+        if (restartTimeoutRef.current) {
+          clearTimeout(restartTimeoutRef.current)
         }
+        
+        // Add a small delay to ensure the recognition has fully stopped
+        restartTimeoutRef.current = setTimeout(() => {
+          if (shouldBeRecordingRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start()
+            } catch (error) {
+              // Handle the case where start() throws an error (e.g., "already started")
+              const err = error as Error
+              console.error('[VoiceTranscription] Failed to restart:', err.message)
+              
+              // Only set error state for critical errors, not "already started"
+              if (!err.message.includes('already started')) {
+                setStatus((prev) => ({
+                  ...prev,
+                  isRecording: false,
+                }))
+                shouldBeRecordingRef.current = false
+              }
+            }
+          }
+        }, 300) // 300ms delay to ensure clean restart
       } else {
         setStatus((prev) => ({
           ...prev,
@@ -206,6 +225,7 @@ export function useVoiceTranscription({
       }
 
       recognitionRef.current = recognition
+      shouldBeRecordingRef.current = true
       recognition.start()
     } catch (error) {
       console.error('[VoiceTranscription] Failed to start recording:', error)
@@ -229,6 +249,14 @@ export function useVoiceTranscription({
 
   // Stop recording
   const stopRecording = useCallback(() => {
+    shouldBeRecordingRef.current = false
+    
+    // Clear any pending restart
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current)
+      restartTimeoutRef.current = null
+    }
+    
     if (recognitionRef.current) {
       recognitionRef.current.stop()
       recognitionRef.current = null
@@ -248,6 +276,12 @@ export function useVoiceTranscription({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      shouldBeRecordingRef.current = false
+      
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current)
+      }
+      
       if (recognitionRef.current) {
         recognitionRef.current.stop()
         recognitionRef.current = null
