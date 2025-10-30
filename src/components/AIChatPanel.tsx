@@ -164,9 +164,8 @@ CRITICAL FORMATTING RULES:
 - For INFO: You may be conversational and friendly.
 
 CONTEXT RULES:
-- If user says "add it" or "insert that" or uses pronouns referring to previous content, use the content from the recent conversation
-- If user asks for new content, generate new content
-- If referring to previous conversation content, provide that content directly without any wrapper text
+- If user says "add it", "insert that", or similar, referring to the previous response, you MUST provide the content from the ASSISTANT's last message verbatim. DO NOT summarize or change it.
+- If user asks for new content, generate new content.
 
 Begin your response now:`
 
@@ -295,11 +294,11 @@ Begin your response now:`
                 })}
               </p>
               
-              {/* Action Buttons for Actionable AI Messages */}
-              {message.role === 'assistant' && message.isActionable && (
+              {/* Action Buttons for Assistant Messages */}
+              {message.role === 'assistant' && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                   {/* Replace Content - Only for REPLACE intent */}
-                  {message.intent === 'REPLACE' && (
+                  {message.isActionable && message.intent === 'REPLACE' && (
                     <button
                       onClick={() => onReplaceContent(stripFillerText(message.content))}
                       className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
@@ -308,7 +307,7 @@ Begin your response now:`
                     </button>
                   )}
                   
-                  {/* Copy - Always available for actionable messages */}
+                  {/* Copy - Always available for ALL assistant messages */}
                   <button
                     onClick={() => handleCopy(stripFillerText(message.content), index)}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1"
@@ -327,7 +326,7 @@ Begin your response now:`
                     )}
                   </button>
                   
-                  {/* Add to Note - Always available for actionable messages */}
+                  {/* Add to Note - Always available for ALL assistant messages */}
                   <button
                     onClick={() => onInsertContent(stripFillerText(message.content))}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
