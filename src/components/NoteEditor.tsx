@@ -6,6 +6,7 @@ import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
 import { TagInput } from '@/components/ui/TagInput'
+import { AIChatPanel } from '@/components/AIChatPanel'
 
 interface NoteEditorProps {
   note: Note
@@ -22,6 +23,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [aiLoading, setAiLoading] = useState(false)
   const [selectedText, setSelectedText] = useState('')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
+  const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -228,6 +230,17 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }
 
+  // AI Chat handlers
+  const handleReplaceContent = (newContent: string) => {
+    setContent(newContent)
+    setIsAIChatVisible(false)
+  }
+
+  const handleInsertContent = (contentToInsert: string) => {
+    setContent(content + '\n\n' + contentToInsert)
+    setIsAIChatVisible(false)
+  }
+
   const charCount = content.length
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
 
@@ -242,9 +255,11 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className="modal w-full max-w-5xl max-h-[90vh] flex flex-col"
+          className={`modal w-full ${isAIChatVisible ? 'max-w-7xl' : 'max-w-5xl'} max-h-[90vh] flex ${isAIChatVisible ? 'flex-row' : 'flex-col'} overflow-hidden`}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Main Editor Section */}
+          <div className={`flex flex-col ${isAIChatVisible ? 'flex-1' : 'w-full'} overflow-hidden`}>
           {/* Header */}
           <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-6">
             <div className="flex items-start justify-between mb-4">
@@ -280,10 +295,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-4 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
             {aiStatus.available ? (
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2 mr-auto">
+                <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Tools</span>
                 </div>
+                
+                {/* AI Chat Toggle Button */}
+                <button
+                  onClick={() => setIsAIChatVisible(!isAIChatVisible)}
+                  className={`btn text-sm ${
+                    isAIChatVisible
+                      ? 'bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 shadow-glow-accent'
+                      : 'btn-secondary'
+                  }`}
+                  title="Toggle AI Chat Assistant"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  AI Chat
+                </button>
+                
+                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
                 
                 <button
                   onClick={handleAIExpand}
@@ -511,6 +542,18 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               </button>
             </div>
           </div>
+          </div>
+          
+          {/* AI Chat Panel */}
+          {isAIChatVisible && (
+            <div className="w-96 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
+              <AIChatPanel
+                note={{ ...note, title, content, tags }}
+                onReplaceContent={handleReplaceContent}
+                onInsertContent={handleInsertContent}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
