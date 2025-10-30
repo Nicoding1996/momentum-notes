@@ -3,7 +3,6 @@ import {
   ReactFlow,
   Node,
   Edge,
-  Controls,
   MiniMap,
   Background,
   BackgroundVariant,
@@ -15,9 +14,11 @@ import {
   Handle,
   Position,
   ConnectionMode,
+  ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Trash2, Edit, Sparkles, X } from 'lucide-react'
+import { Trash2, Edit, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Note } from '@/types/note'
@@ -128,14 +129,30 @@ const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
 }
 
-export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
+function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
+  const reactFlowWrapper = useRef<HTMLDivElement>(null)
+  const { setViewport, getViewport } = useReactFlow()
+  const [currentZoom, setCurrentZoom] = useState(100)
   
   // Debounced save for performance - save positions after user stops dragging
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const pendingSavesRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+  
+  // Custom zoom handling for enhanced responsiveness
+  const touchStartRef = useRef<{ dist: number; x: number; y: number } | null>(null)
+  const rafPendingRef = useRef(false)
+  
+  // Track zoom changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const viewport = getViewport()
+      setCurrentZoom(Math.round(viewport.zoom * 100))
+    }, 100)
+    return () => clearInterval(interval)
+  }, [getViewport])
 
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
@@ -449,9 +466,141 @@ Return ONLY the JSON array, no other text:`
     }
   }, [notes, isAutoLinking, generateText])
 
+  // Enhanced pinch-to-zoom handler with zoom-around-pointer
+  useEffect(() => {
+    const wrapper = reactFlowWrapper.current
+    if (!wrapper) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        const dist = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        )
+        const x = (touch1.clientX + touch2.clientX) / 2
+        const y = (touch1.clientY + touch2.clientY) / 2
+        touchStartRef.current = { dist, x, y }
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && touchStartRef.current) {
+        e.preventDefault()
+        
+        const touch1 = e.touches[0]
+        const touch2 = e.touches[1]
+        const newDist = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        )
+
+        // Directly control ReactFlow viewport; compute distance ratio
+        const ratio = newDist / touchStartRef.current.dist
+
+        // Update for next frame
+        touchStartRef.current.dist = newDist
+
+        if (!rafPendingRef.current) {
+          rafPendingRef.current = true
+          requestAnimationFrame(() => {
+            const { x, y, zoom } = getViewport()
+            const cx = (touch1.clientX + touch2.clientX) / 2
+            const cy = (touch1.clientY + touch2.clientY) / 2
+
+            // Apply high sensitivity to pinch (higher = faster per inch)
+            const sensitivity = 20
+            const adjusted = Math.pow(ratio, sensitivity)
+
+            // Clamp to 5%..100%
+            const targetZoom = Math.max(0.05, Math.min(1, zoom * adjusted))
+
+            // Keep content under pinch center stable while zooming
+            const contentX = (cx - x) / zoom
+            const contentY = (cy - y) / zoom
+            const newX = cx - contentX * targetZoom
+            const newY = cy - contentY * targetZoom
+
+            setViewport({ x: newX, y: newY, zoom: targetZoom }, { duration: 0 })
+            rafPendingRef.current = false
+          })
+        }
+      }
+    }
+
+    const handleTouchEnd = () => {
+      touchStartRef.current = null
+    }
+
+    // Add listeners with passive: false to allow preventDefault
+    wrapper.addEventListener('touchstart', handleTouchStart, { passive: false })
+    wrapper.addEventListener('touchmove', handleTouchMove, { passive: false })
+    wrapper.addEventListener('touchend', handleTouchEnd)
+    wrapper.addEventListener('touchcancel', handleTouchEnd)
+
+    return () => {
+      wrapper.removeEventListener('touchstart', handleTouchStart)
+      wrapper.removeEventListener('touchmove', handleTouchMove)
+      wrapper.removeEventListener('touchend', handleTouchEnd)
+      wrapper.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [])
+
+  // Helper: zoom around a specific screen point to avoid "bouncing"
+  const setZoomAnchored = useCallback((targetZoom: number, cx: number, cy: number, animateMs = 120) => {
+    const { x, y, zoom } = getViewport()
+    const clamped = Math.max(0.05, Math.min(1, targetZoom))
+    const contentX = (cx - x) / zoom
+    const contentY = (cy - y) / zoom
+    const newX = cx - contentX * clamped
+    const newY = cy - contentY * clamped
+    setViewport({ x: newX, y: newY, zoom: clamped }, { duration: animateMs })
+  }, [getViewport, setViewport])
+
+  const getWrapperCenter = useCallback(() => {
+    const el = reactFlowWrapper.current
+    if (!el) return { cx: window.innerWidth / 2, cy: window.innerHeight / 2 }
+    const rect = el.getBoundingClientRect()
+    return { cx: rect.left + rect.width / 2, cy: rect.top + rect.height / 2 }
+  }, [])
+
+  // Custom zoom controls (anchored to canvas center) with larger increments
+  const handleZoomIn = useCallback(() => {
+    const { zoom } = getViewport()
+    const { cx, cy } = getWrapperCenter()
+    setZoomAnchored(zoom + 0.25, cx, cy, 90) // 25% step
+  }, [getViewport, getWrapperCenter, setZoomAnchored])
+
+  const handleZoomOut = useCallback(() => {
+    const { zoom } = getViewport()
+    const { cx, cy } = getWrapperCenter()
+    setZoomAnchored(zoom - 0.25, cx, cy, 90) // 25% step
+  }, [getViewport, getWrapperCenter, setZoomAnchored])
+
+  const handleZoomChange = useCallback((value: number) => {
+    const { cx, cy } = getWrapperCenter()
+    setCurrentZoom(value)
+    setZoomAnchored(value / 100, cx, cy, 80)
+  }, [getWrapperCenter, setZoomAnchored])
+
+  const handleFitView = useCallback(() => {
+    const { cx, cy } = getWrapperCenter()
+    setZoomAnchored(1, cx, cy, 140)
+    setCurrentZoom(100)
+  }, [getWrapperCenter, setZoomAnchored])
+
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative" style={{ height: 'calc(100vh - 64px)' }}>
+      <div
+        ref={reactFlowWrapper}
+        className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative"
+        style={{
+          height: 'calc(100vh - 64px)',
+          touchAction: 'none',
+          willChange: 'transform',
+        }}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges.map(edge => ({
@@ -474,16 +623,17 @@ Return ONLY the JSON array, no other text:`
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
-          minZoom={0.2}
-          maxZoom={2}
+          fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+          minZoom={0.05}
+          maxZoom={1}
           deleteKeyCode="Delete"
           selectNodesOnDrag={false}
           connectionMode={ConnectionMode.Loose}
           panOnScroll={true}
-          panOnScrollSpeed={0.5}
+          panOnScrollSpeed={3}
           zoomOnScroll={true}
           zoomOnPinch={true}
-          zoomOnDoubleClick={false}
+          zoomOnDoubleClick={true}
           preventScrolling={true}
           defaultEdgeOptions={{
             animated: false,
@@ -497,10 +647,46 @@ Return ONLY the JSON array, no other text:`
             className="bg-gray-50 dark:bg-gray-950"
             color="#d6d3d1"
           />
-          <Controls
-            className="!shadow-lg !border-gray-200/60 dark:!border-gray-800/60 !rounded-xl"
-            showInteractive={false}
-          />
+          
+          {/* Custom Zoom Controls - Canva Style */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 bg-white dark:bg-gray-900 rounded-full px-4 py-2.5 shadow-lg border border-gray-200 dark:border-gray-700">
+            <button
+              onClick={handleZoomOut}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Zoom out"
+            >
+              <ZoomOut className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            </button>
+            
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={currentZoom}
+                onChange={(e) => handleZoomChange(Number(e.target.value))}
+                className="w-32 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-accent-500"
+                style={{
+                  background: `linear-gradient(to right, #fbbf24 0%, #fbbf24 ${((currentZoom - 5) / 95) * 100}%, #e5e7eb ${((currentZoom - 5) / 95) * 100}%, #e5e7eb 100%)`
+                }}
+              />
+              <button
+                onClick={handleFitView}
+                className="min-w-[48px] px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+              >
+                {currentZoom}%
+              </button>
+            </div>
+            
+            <button
+              onClick={handleZoomIn}
+              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Zoom in"
+            >
+              <ZoomIn className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            </button>
+          </div>
+
           <MiniMap
             nodeStrokeWidth={3}
             zoomable
@@ -570,5 +756,13 @@ Return ONLY the JSON array, no other text:`
         </div>
       )}
     </div>
+  )
+}
+
+export function CanvasView(props: CanvasViewProps) {
+  return (
+    <ReactFlowProvider>
+      <CanvasViewInner {...props} />
+    </ReactFlowProvider>
   )
 }
