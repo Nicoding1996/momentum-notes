@@ -294,13 +294,13 @@ Begin your response now:`
                     )}
                   </button>
                   
-                  {/* Insert Below - Always available for actionable messages */}
+                  {/* Add to Note - Always available for actionable messages */}
                   <button
                     onClick={() => onInsertContent(message.content)}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
-                    title="Insert below current content"
+                    title="Add content to your note"
                   >
-                    Insert Below
+                    Add to Note
                   </button>
                 </div>
               )}

@@ -262,7 +262,13 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const handleInsertContent = (contentToInsert: string) => {
     // Save current content to history before inserting
     setContentHistory(prev => [...prev, content])
-    setContent(content + '\n\n' + contentToInsert)
+    
+    // Smart insertion: no extra newlines if note is empty
+    if (content.trim() === '') {
+      setContent(contentToInsert)
+    } else {
+      setContent(content + '\n\n' + contentToInsert)
+    }
   }
 
   const handleUndo = () => {
