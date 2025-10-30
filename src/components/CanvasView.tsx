@@ -16,6 +16,8 @@ import {
   ConnectionMode,
   ReactFlowProvider,
   useReactFlow,
+  NodeResizer,
+  NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Trash2, Edit, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react'
@@ -37,22 +39,42 @@ interface CanvasViewProps {
 // Custom Note Node Component with "Light from Sky" design principle
 function NoteNode({ data }: { data: any }) {
   return (
-    <div
-      className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 min-w-[240px] max-w-[340px] relative group transition-all duration-300 ease-out"
-      style={{
-        willChange: 'transform, box-shadow',
-        transform: 'translate3d(0, 0, 0)',
-        boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
-        e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
-        e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
-      }}
-    >
+    <>
+      {/* Resize handles - subtle, elegant, minimal (matches "Light from Sky" aesthetic) */}
+      <NodeResizer
+        minWidth={240}
+        minHeight={200}
+        maxWidth={600}
+        maxHeight={800}
+        isVisible={true}
+        lineClassName="!border !border-gray-300/40 dark:!border-gray-600/40"
+        handleClassName="!w-3 !h-3 !bg-white dark:!bg-gray-800 !border-2 !border-gray-400/60 dark:!border-gray-500/60 !rounded-full opacity-0 group-hover:opacity-100 !transition-opacity !duration-200"
+        handleStyle={{
+          width: '12px',
+          height: '12px',
+          borderRadius: '50%',
+          backgroundColor: 'white',
+          border: '2px solid rgba(156, 163, 175, 0.6)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+          cursor: 'nwse-resize',
+        }}
+      />
+      <div
+        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden"
+        style={{
+          willChange: 'transform, box-shadow',
+          transform: 'translate3d(0, 0, 0)',
+          boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
+          e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
+          e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+        }}
+      >
       {/* Connection handles - Accent color for visibility */}
       <Handle
         type="source"
@@ -121,7 +143,8 @@ function NoteNode({ data }: { data: any }) {
       <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 font-medium">
         {new Date(data.updatedAt).toLocaleDateString()}
       </p>
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -137,9 +160,9 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   const { setViewport, getViewport } = useReactFlow()
   const [currentZoom, setCurrentZoom] = useState(100)
   
-  // Debounced save for performance - save positions after user stops dragging
+  // Debounced save for performance - save positions after user stops dragging/resizing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const pendingSavesRef = useRef<Map<string, { x: number; y: number }>>(new Map())
+  const pendingSavesRef = useRef<Map<string, { x?: number; y?: number; width?: number; height?: number }>>(new Map())
   
   // Custom zoom handling for enhanced responsiveness
   const touchStartRef = useRef<{ dist: number; x: number; y: number } | null>(null)
@@ -168,6 +191,11 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
           x: note.x ?? (index % 4) * 350 + 50,
           y: note.y ?? Math.floor(index / 4) * 250 + 50,
         },
+        style: {
+          width: note.width ?? 280,
+          height: note.height ?? 240,
+        },
+        resizing: false,
         data: {
           title: note.title,
           content: note.content,
@@ -243,24 +271,31 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
       if (saves.length === 0) return
       
       try {
-        // Batch update all positions at once
+        // Batch update all positions and dimensions at once
         await Promise.all(
-          saves.map(([id, position]) =>
-            db.notes.update(id, { x: position.x, y: position.y })
-          )
+          saves.map(([id, data]) => {
+            const updates: any = {}
+            if (data.x !== undefined) updates.x = data.x
+            if (data.y !== undefined) updates.y = data.y
+            if (data.width !== undefined) updates.width = data.width
+            if (data.height !== undefined) updates.height = data.height
+            return db.notes.update(id, updates)
+          })
         )
         pendingSavesRef.current.clear()
       } catch (error) {
-        console.error('Failed to save note positions:', error)
+        console.error('Failed to save note positions/dimensions:', error)
       }
-    }, 500) // Save 500ms after user stops dragging
+    }, 500) // Save 500ms after user stops dragging/resizing
   }, [])
 
   // Optimistic UI update - update immediately, save later
   const handleNodeDragStop: NodeMouseHandler = useCallback(
     (_event, node) => {
       // Store position for batch save
+      const currentSave = pendingSavesRef.current.get(node.id) || {}
       pendingSavesRef.current.set(node.id, {
+        ...currentSave,
         x: node.position.x,
         y: node.position.y,
       })
@@ -269,6 +304,30 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
       debouncedSavePositions()
     },
     [debouncedSavePositions]
+  )
+
+  // Custom onNodesChange handler to capture dimension changes from resizing
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      // Apply changes to nodes state
+      onNodesChange(changes)
+      
+      // Check for dimension changes (from resizing)
+      changes.forEach((change) => {
+        if (change.type === 'dimensions' && change.dimensions) {
+          const currentSave = pendingSavesRef.current.get(change.id) || {}
+          pendingSavesRef.current.set(change.id, {
+            ...currentSave,
+            width: change.dimensions.width,
+            height: change.dimensions.height,
+          })
+          
+          // Trigger debounced save
+          debouncedSavePositions()
+        }
+      })
+    },
+    [onNodesChange, debouncedSavePositions]
   )
   
   // Cleanup timeout on unmount
@@ -614,7 +673,7 @@ Return ONLY the JSON array, no other text:`
               opacity: edge.id === selectedEdge ? 1 : 0.6,
             },
           }))}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
           onConnect={handleConnect}
