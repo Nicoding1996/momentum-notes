@@ -17,7 +17,7 @@ import {
   ConnectionMode,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Trash2, Edit, Sparkles, Filter, X, Zap } from 'lucide-react'
+import { Trash2, Edit, Sparkles, X } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Note } from '@/types/note'
@@ -132,8 +132,6 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
-  const [selectedRelationshipFilter, setSelectedRelationshipFilter] = useState<string>('all')
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false)
   
   // Debounced save for performance - save positions after user stops dragging
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -142,11 +140,6 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
   
-  // Filter edges based on selected relationship type
-  const filteredNoteEdges = useMemo(() => {
-    if (selectedRelationshipFilter === 'all') return noteEdges
-    return noteEdges.filter(edge => edge.relationshipType === selectedRelationshipFilter)
-  }, [noteEdges, selectedRelationshipFilter])
 
   // Convert notes to React Flow nodes
   const initialNodes: Node[] = useMemo(
@@ -173,7 +166,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   // Convert database edges to React Flow edges with softer, organic styling
   const initialEdges: Edge[] = useMemo(
     () =>
-      filteredNoteEdges.map((edge) => {
+      noteEdges.map((edge) => {
         const relationshipType = edge.relationshipType
           ? RELATIONSHIP_TYPES[edge.relationshipType as keyof typeof RELATIONSHIP_TYPES]
           : null
@@ -195,7 +188,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
           },
         }
       }),
-    [filteredNoteEdges]
+    [noteEdges]
   )
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
@@ -210,7 +203,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   // Update edges when database changes
   useEffect(() => {
     setEdges(initialEdges)
-  }, [filteredNoteEdges, setEdges, initialEdges])
+  }, [noteEdges, setEdges, initialEdges])
 
   // Handle edge selection
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
@@ -458,106 +451,7 @@ Return ONLY the JSON array, no other text:`
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-4 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
-        <div className="flex justify-between items-center gap-3 max-w-[1920px] mx-auto">
-          {/* Instructions */}
-          <div className="text-sm text-gray-600 dark:text-gray-400 hidden lg:flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-            <span className="font-medium">
-              Hover over notes to connect •{' '}
-              {selectedEdge ? (
-                <strong className="text-red-500">Press DELETE to remove connection</strong>
-              ) : (
-                'Click a connection to select it'
-              )}
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2 ml-auto">
-            {/* Filter Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="btn btn-secondary text-sm"
-                title="Filter by relationship type"
-              >
-                <Filter className="w-4 h-4" />
-                <span>
-                  {selectedRelationshipFilter === 'all'
-                    ? 'All Types'
-                    : RELATIONSHIP_TYPES[selectedRelationshipFilter as keyof typeof RELATIONSHIP_TYPES]?.label || 'All Types'}
-                </span>
-              </button>
-              
-              {showFilterDropdown && (
-                <div className="absolute right-0 mt-2 w-72 modal z-50 p-2">
-                  <button
-                    onClick={() => {
-                      setSelectedRelationshipFilter('all')
-                      setShowFilterDropdown(false)
-                    }}
-                    className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${
-                      selectedRelationshipFilter === 'all'
-                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <div className="font-semibold">All Types</div>
-                    <div className="text-xs text-gray-500 mt-1">Show all connections</div>
-                  </button>
-                  
-                  {Object.values(RELATIONSHIP_TYPES).map((type) => (
-                    <button
-                      key={type.id}
-                      onClick={() => {
-                        setSelectedRelationshipFilter(type.id)
-                        setShowFilterDropdown(false)
-                      }}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${
-                        selectedRelationshipFilter === type.id
-                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: type.color }}
-                        />
-                        <span className="font-semibold">{type.label}</span>
-                      </div>
-                      <div className="text-xs text-gray-500 ml-6 mt-1">{type.description}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* AI Auto-Link Button - Special & Unique Design */}
-            {status.available && notes.length >= 2 && (
-              <button
-                onClick={handleAutoLink}
-                disabled={isAutoLinking}
-                className="relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-glow-accent active:scale-95"
-                style={{
-                  boxShadow: '0 -1px 2px 0 rgba(255, 255, 255, 0.3) inset, 0 4px 12px -2px rgba(255, 215, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.1)',
-                  willChange: 'transform, box-shadow',
-                }}
-              >
-                <Sparkles className={`w-5 h-5 ${isAutoLinking ? 'animate-spin' : 'animate-pulse-slow'}`} />
-                <span>{isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link'}</span>
-                {!isAutoLinking && (
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
-                    style={{ backgroundSize: '200% 100%' }}
-                  />
-                )}
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950" style={{ height: 'calc(100vh - 140px)' }}>
+      <div className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative" style={{ height: 'calc(100vh - 64px)' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges.map(edge => ({
@@ -616,6 +510,22 @@ Return ONLY the JSON array, no other text:`
             maskColor="rgba(0, 0, 0, 0.05)"
           />
         </ReactFlow>
+
+        {/* Floating AI Auto-Link Button */}
+        {status.available && notes.length >= 2 && (
+          <button
+            onClick={handleAutoLink}
+            disabled={isAutoLinking}
+            className="absolute top-4 right-4 z-10 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-display font-semibold text-sm bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-glow-accent active:scale-95"
+            style={{
+              boxShadow: '0 -1px 2px 0 rgba(255, 255, 255, 0.3) inset, 0 4px 12px -2px rgba(255, 215, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.1)',
+              willChange: 'transform, box-shadow',
+            }}
+          >
+            <Sparkles className="w-5 h-5" />
+            <span>{isAutoLinking ? 'Analyzing...' : 'AI Auto-Link'}</span>
+          </button>
+        )}
       </div>
 
       {/* Relationship Type Selection Modal */}
