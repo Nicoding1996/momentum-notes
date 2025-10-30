@@ -28,6 +28,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [contentHistory, setContentHistory] = useState<string[]>([])
   const interimStartPosRef = useRef<number | null>(null)
+  const contentBeforeInterimRef = useRef<string>('')
+  const cursorPositionRef = useRef<number>(0)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -52,31 +54,94 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
     if (isFinal) {
       setContent((prev) => {
-        if (interimStartPosRef.current !== null) {
-          const beforeInterim = prev.substring(0, interimStartPosRef.current)
-          interimStartPosRef.current = null
-          return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
-        }
-        const prevTrim = prev.trim()
-        return prevTrim ? `${prevTrim} ${trimmedText}` : trimmedText
+        // Use the stored start position from when recording began
+        const insertPos = interimStartPosRef.current ?? cursorPositionRef.current
+        
+        // Get the original content parts (before any interim text was shown)
+        const before = contentBeforeInterimRef.current
+          ? contentBeforeInterimRef.current.substring(0, insertPos)
+          : prev.substring(0, insertPos)
+        
+        const after = contentBeforeInterimRef.current
+          ? contentBeforeInterimRef.current.substring(insertPos)
+          : prev.substring(insertPos)
+        
+        // Smart spacing: add space before if needed and content exists before cursor
+        const needsSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')
+        const spaceBefore = needsSpaceBefore ? ' ' : ''
+        
+        // Calculate new cursor position after insertion
+        const newPos = insertPos + spaceBefore.length + trimmedText.length
+        
+        const result = before + spaceBefore + trimmedText + after
+        
+        // Reset refs for next transcription
+        interimStartPosRef.current = null
+        contentBeforeInterimRef.current = ''
+        
+        // Update cursor position and move cursor to the new position after insertion
+        setTimeout(() => {
+          cursorPositionRef.current = newPos
+          if (textareaRef.current) {
+            textareaRef.current.selectionStart = newPos
+            textareaRef.current.selectionEnd = newPos
+            textareaRef.current.focus()
+          }
+        }, 0)
+        
+        return result
       })
     } else {
       setContent((prev) => {
+        // Store the starting position and original content for interim results (only once per phrase)
         if (interimStartPosRef.current === null) {
-          interimStartPosRef.current = prev.length
+          interimStartPosRef.current = cursorPositionRef.current
+          contentBeforeInterimRef.current = prev
         }
-        const beforeInterim = prev.substring(0, interimStartPosRef.current)
-        return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
+        
+        const insertPos = interimStartPosRef.current
+        // Get the original content parts
+        const before = contentBeforeInterimRef.current.substring(0, insertPos)
+        const after = contentBeforeInterimRef.current.substring(insertPos)
+        
+        // Smart spacing: add space before if needed
+        const needsSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')
+        const spaceBefore = needsSpaceBefore ? ' ' : ''
+        
+        return before + spaceBefore + trimmedText + after
       })
     }
   }
 
-  const { status: voiceStatus, toggleRecording } = useVoiceTranscription({
+  const { status: voiceStatus, startRecording, stopRecording } = useVoiceTranscription({
     onTranscript: handleTranscript,
     continuous: true,
     interimResults: true,
     language: 'en-US',
   })
+
+  // Handle recording start - capture cursor position at the moment recording begins
+  const handleStartRecording = () => {
+    // Capture current cursor position before starting
+    if (textareaRef.current) {
+      cursorPositionRef.current = textareaRef.current.selectionStart
+    }
+    startRecording()
+  }
+
+  // Handle recording stop - allow cursor updates again
+  const handleStopRecording = () => {
+    stopRecording()
+  }
+
+  // Handle recording toggle
+  const handleToggleRecording = () => {
+    if (voiceStatus.isRecording) {
+      handleStopRecording()
+    } else {
+      handleStartRecording()
+    }
+  }
 
   // Track unsaved changes
   useEffect(() => {
@@ -351,7 +416,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 {voiceStatus.supported && (
                   <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-200 dark:border-gray-700">
                     <button
-                      onClick={toggleRecording}
+                      onClick={handleToggleRecording}
                       disabled={aiLoading}
                       className={`btn text-sm ${
                         voiceStatus.isRecording
@@ -480,8 +545,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 value={content}
                 onChange={(e) => {
                   setContent(e.target.value)
+                  // Reset interim tracking when user manually types
                   if (interimStartPosRef.current !== null) {
                     interimStartPosRef.current = null
+                    contentBeforeInterimRef.current = ''
+                  }
+                  // Only update cursor position when not recording
+                  if (!voiceStatus.isRecording) {
+                    cursorPositionRef.current = e.target.selectionStart
+                  }
+                }}
+                onClick={(e) => {
+                  // Only update cursor position when not recording
+                  if (!voiceStatus.isRecording) {
+                    cursorPositionRef.current = e.currentTarget.selectionStart
+                  }
+                }}
+                onKeyUp={(e) => {
+                  // Only update cursor position when not recording
+                  if (!voiceStatus.isRecording) {
+                    cursorPositionRef.current = e.currentTarget.selectionStart
                   }
                 }}
                 onContextMenu={handleContextMenu}
