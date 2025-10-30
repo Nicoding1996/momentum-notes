@@ -86,6 +86,21 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
     inputRef.current?.focus()
   }
 
+  // Convert HTML to plain text by removing HTML tags
+  const stripHtmlTags = (html: string): string => {
+    // Create a temporary div element to parse HTML
+    const temp = document.createElement('div')
+    temp.innerHTML = html
+    
+    // Get text content (this automatically strips all HTML tags)
+    let text = temp.textContent || temp.innerText || ''
+    
+    // Clean up extra whitespace
+    text = text.replace(/\s+/g, ' ').trim()
+    
+    return text
+  }
+
   // Strip conversational filler and conversation history from content before adding to note
   const stripFillerText = (content: string): string => {
     // First, remove the entire conversation history block if it exists
@@ -131,7 +146,9 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
     setIsProcessing(true)
 
     try {
-      const context = `Note Title: "${note.title}"\n\nNote Content:\n${note.content}`
+      // Convert HTML content to plain text for AI context
+      const plainTextContent = stripHtmlTags(note.content)
+      const context = `Note Title: "${note.title}"\n\nNote Content:\n${plainTextContent}`
       
       // Build conversation history (last 3 messages for context)
       const recentMessages = messages.slice(-3)
@@ -150,18 +167,40 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
 Current User Request: ${userMessage.content}
 
 ---
-TASK: Analyze the user's request (considering the conversation history if present) and respond with:
-1. First line MUST be exactly one of: INTENT:REPLACE or INTENT:ADD or INTENT:INFO
-   - REPLACE: User wants to modify/rewrite/change existing content
-   - ADD: User wants to add new information/facts/content
-   - INFO: User is asking a question or needs explanation (no content changes)
-2. Following lines: Provide the content to fulfill the request
+IMPORTANT: You MUST start your response with EXACTLY one of these on the first line:
+- INTENT:REPLACE
+- INTENT:ADD
+- INTENT:INFO
+
+WHEN TO USE EACH INTENT:
+
+INTENT:REPLACE - Use when user wants to CHANGE/MODIFY/REWRITE the existing note:
+  - summarize, summary, make shorter, condense
+  - improve, make better, enhance, refine
+  - rewrite, rephrase
+  - simplify, make simpler, make easier
+  - make it [professional/casual/formal]
+  - fix, correct, edit
+  
+INTENT:ADD - Use when user wants to ADD NEW content to existing note:
+  - what else can I add
+  - give me more ideas/facts
+  - expand (meaning add more content, not rewrite)
+  
+INTENT:INFO - Use only for pure questions with NO content changes:
+  - what does this mean
+  - explain this concept
+  - how does X work
+
+After the INTENT line, provide ONLY the content requested.
 
 CRITICAL FORMATTING RULES:
 - For REPLACE: Provide ONLY the modified note content. NO explanations, NO "Here's the...", NO preambles.
 - For ADD: Provide ONLY the new content to add. NO explanations, NO "Here's the content...", NO introductions.
 - Start immediately with the actual content the user requested.
 - For INFO: You may be conversational and friendly.
+- NEVER use HTML tags in your response. Use plain text or markdown formatting only.
+- Do NOT include tags like <p>, <br>, <div>, etc. Just provide clean, readable text.
 
 CONTEXT RULES:
 - If user says "add it", "insert that", or similar, referring to the previous response, you MUST provide the content from the ASSISTANT's last message verbatim. DO NOT summarize or change it.
@@ -169,7 +208,7 @@ CONTEXT RULES:
 
 Begin your response now:`
 
-      const systemPrompt = 'You are a helpful AI assistant that helps users work with their notes. Always start your response with INTENT:REPLACE, INTENT:ADD, or INTENT:INFO on the first line, then provide the requested content.'
+      const systemPrompt = 'You are a helpful AI assistant that helps users work with their notes. CRITICAL: Always start your response with INTENT:REPLACE, INTENT:ADD, or INTENT:INFO on the first line, then provide the requested content. NEVER use HTML tags - only use plain text or markdown formatting.'
 
       const response = await generateText(prompt, systemPrompt)
 
@@ -184,8 +223,54 @@ Begin your response now:`
         if (intentLine === 'REPLACE' || intentLine === 'ADD' || intentLine === 'INFO') {
           intent = intentLine
           content = lines.slice(1).join('\n').trim()
+          console.log('[AI Chat] AI provided intent:', intent)
         }
       }
+      
+      // ALWAYS check user's request for keywords to validate/override AI's intent
+      const userRequest = userMessage.content.toLowerCase().trim()
+      console.log('[AI Chat] User request:', userRequest)
+      
+      // Keywords that indicate REPLACE intent
+      const replaceKeywords = [
+        'summar', 'shorten', 'condense', 'trim',
+        'improve', 'better', 'enhance', 'refine', 'polish',
+        'rewrite', 'rephrase', 'reformulate', 'restructure',
+        'simplif', 'simpler', 'easier', 'less complicated',
+        'make it', 'make this',
+        'fix', 'correct', 'edit', 'proofread',
+        'convert', 'change to', 'turn into',
+        'clarif', 'clearer',
+        'professional', 'casual', 'formal'
+      ]
+      
+      // Keywords that indicate ADD intent
+      const addKeywords = [
+        'add', 'what else', 'give me more', 'expand',
+        'what other', 'additional', 'more ideas', 'more facts'
+      ]
+      
+      // Check for keywords in user's request
+      const hasReplaceKeyword = replaceKeywords.some(keyword => userRequest.includes(keyword))
+      const hasAddKeyword = addKeywords.some(keyword => userRequest.includes(keyword))
+      
+      console.log('[AI Chat] Has REPLACE keyword:', hasReplaceKeyword)
+      console.log('[AI Chat] Has ADD keyword:', hasAddKeyword)
+      
+      // Override AI's intent if user's request clearly indicates REPLACE or ADD
+      if (hasReplaceKeyword && intent === 'INFO') {
+        console.log('[AI Chat] Overriding INFO to REPLACE based on keywords')
+        intent = 'REPLACE'
+      } else if (hasAddKeyword && intent === 'INFO') {
+        console.log('[AI Chat] Overriding INFO to ADD based on keywords')
+        intent = 'ADD'
+      } else if (hasReplaceKeyword && !intent) {
+        intent = 'REPLACE'
+      } else if (hasAddKeyword && !intent) {
+        intent = 'ADD'
+      }
+      
+      console.log('[AI Chat] Final intent:', intent)
 
       const assistantMessage: Message = {
         role: 'assistant',
@@ -194,6 +279,12 @@ Begin your response now:`
         isActionable: intent === 'REPLACE' || intent === 'ADD',
         intent: intent,
       }
+      
+      console.log('[AI Chat] Assistant message created:', {
+        intent: assistantMessage.intent,
+        isActionable: assistantMessage.isActionable,
+        contentPreview: content.substring(0, 50) + '...'
+      })
 
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {

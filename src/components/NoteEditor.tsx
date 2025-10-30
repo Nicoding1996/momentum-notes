@@ -319,25 +319,34 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
   // AI Chat handlers with undo support
   const handleReplaceContent = (newContent: string) => {
+    if (!editor) return
+    
     // Save current content to history before replacing
     setContentHistory(prev => [...prev, content])
+    
+    // Update both React state and Tiptap editor
     setContent(newContent)
+    editor.commands.setContent(newContent)
   }
 
   const handleInsertContent = (contentToInsert: string) => {
+    if (!editor) return
+    
     // Save current content to history before inserting
     setContentHistory(prev => [...prev, content])
     
     // Smart insertion: no extra newlines if note is empty
-    if (content.trim() === '') {
-      setContent(contentToInsert)
-    } else {
-      setContent(content + '\n\n' + contentToInsert)
-    }
+    const newContent = content.trim() === ''
+      ? contentToInsert
+      : content + '\n\n' + contentToInsert
+    
+    // Update both React state and Tiptap editor
+    setContent(newContent)
+    editor.commands.setContent(newContent)
   }
 
   const handleUndo = () => {
-    if (contentHistory.length === 0) return
+    if (contentHistory.length === 0 || !editor) return
     
     // Get the last saved content
     const previousContent = contentHistory[contentHistory.length - 1]
@@ -345,8 +354,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     // Remove it from history
     setContentHistory(prev => prev.slice(0, -1))
     
-    // Restore the content
+    // Update both React state and Tiptap editor
     setContent(previousContent)
+    editor.commands.setContent(previousContent)
   }
 
   const charCount = content.length
