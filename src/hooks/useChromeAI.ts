@@ -208,12 +208,22 @@ export function useChromeAI() {
   }, [generateText])
 
   // Improve writing using Rewriter API (with Language Model fallback)
-  const improveWriting = useCallback(async (text: string, tone: 'more-formal' | 'more-casual' = 'more-formal'): Promise<string> => {
-    if (!window.ai?.rewriter) {
-      // Fallback to language model if rewriter not available
+  const improveWriting = useCallback(async (text: string, tone?: 'more-formal' | 'more-casual'): Promise<string> => {
+    // If no tone specified, improve clarity and quality while maintaining original style
+    if (!tone) {
+      const prompt = `Improve the following text by fixing any grammar or spelling errors and enhancing clarity while maintaining the original tone and style. Keep it natural and conversational. Output ONLY the improved text, without any explanation, commentary, or preamble.\n\nText to improve: "${text}"`
       return generateText(
-        `Rewrite the following text in a ${tone === 'more-formal' ? 'formal' : 'casual'} tone:\n\n${text}`,
-        'You are a writing assistant that helps improve text.'
+        prompt,
+        'You are a writing assistant that improves text quality while preserving the original voice and style. You only output the improved text.'
+      )
+    }
+
+    // Fallback to language model if rewriter not available
+    if (!window.ai?.rewriter) {
+      const prompt = `Rewrite the following text in a ${tone === 'more-formal' ? 'formal' : 'casual'} tone. Output ONLY the rewritten text, without any explanation, commentary, or preamble.\n\nText to rewrite: "${text}"`
+      return generateText(
+        prompt,
+        'You are a writing assistant that helps improve text. You only output the improved text.'
       )
     }
 

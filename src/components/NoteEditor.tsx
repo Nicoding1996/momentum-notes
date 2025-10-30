@@ -183,6 +183,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     
     setAiLoading(true)
     try {
+      setContentHistory(prev => [...prev, content])
       const expanded = await expandText(selectedText, `This is part of a note titled: ${title}`)
       replaceSelection(expanded, setContent)
       closeContextMenu()
@@ -198,6 +199,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     
     setAiLoading(true)
     try {
+      setContentHistory(prev => [...prev, content])
       const summary = await summarizeText(selectedText, 'tl;dr')
       replaceSelection(summary, setContent)
       closeContextMenu()
@@ -213,7 +215,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     
     setAiLoading(true)
     try {
-      const improved = await improveWriting(selectedText, 'more-formal')
+      setContentHistory(prev => [...prev, content])
+      const improved = await improveWriting(selectedText)
       replaceSelection(improved, setContent)
       closeContextMenu()
     } catch (error) {
@@ -534,6 +537,14 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </div>
 
             <div className="flex items-center gap-3">
+              {contentHistory.length > 0 && (
+                <button
+                  onClick={handleUndo}
+                  className="btn-secondary text-sm"
+                >
+                  Undo
+                </button>
+              )}
               {hasUnsavedChanges && (
                 <span className="text-sm text-amber-600 dark:text-amber-400 font-medium mr-2 flex items-center gap-2">
                   <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
