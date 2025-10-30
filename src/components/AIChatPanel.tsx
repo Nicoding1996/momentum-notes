@@ -129,7 +129,7 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
         </div>
         <div>
           <h3 className="font-display font-semibold text-sm text-gray-900 dark:text-gray-100">
-            AI Assistant
+            AI Co-Pilot
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Ask me to modify or improve your note

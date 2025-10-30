@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3, ChevronDown, Maximize2, GripVertical } from 'lucide-react'
+import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3, ChevronDown, Maximize2 } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -26,15 +26,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [showAIToolsDropdown, setShowAIToolsDropdown] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
-  const [chatPanelPosition, setChatPanelPosition] = useState({ x: 0, y: 100 })
-  const [chatPanelSize, setChatPanelSize] = useState({ width: 400, height: 500 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const chatPanelRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
@@ -98,14 +92,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }, [title, content, hasUnsavedChanges])
 
-  // Initialize chat panel position (top-right corner)
-  useEffect(() => {
-    if (isAIChatVisible && chatPanelPosition.x === 0) {
-      const windowWidth = window.innerWidth
-      setChatPanelPosition({ x: windowWidth - chatPanelSize.width - 50, y: 100 })
-    }
-  }, [isAIChatVisible])
-
   // Focus textarea on mount
   useEffect(() => {
     textareaRef.current?.focus()
@@ -144,39 +130,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [showAIToolsDropdown])
-
-  // Handle dragging
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        setChatPanelPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-        })
-      }
-      if (isResizing && chatPanelRef.current) {
-        const rect = chatPanelRef.current.getBoundingClientRect()
-        setChatPanelSize({
-          width: Math.max(350, e.clientX - rect.left),
-          height: Math.max(400, e.clientY - rect.top),
-        })
-      }
-    }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-      setIsResizing(false)
-    }
-
-    if (isDragging || isResizing) {
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-      }
-    }
-  }, [isDragging, isResizing, dragOffset])
 
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
@@ -307,22 +260,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     setContent(content + '\n\n' + contentToInsert)
   }
 
-  const handleStartDrag = (e: React.MouseEvent) => {
-    if (chatPanelRef.current) {
-      const rect = chatPanelRef.current.getBoundingClientRect()
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      })
-      setIsDragging(true)
-    }
-  }
-
-  const handleStartResize = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    setIsResizing(true)
-  }
-
   const charCount = content.length
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
 
@@ -337,11 +274,23 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className="modal w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden"
+          className="modal w-full max-w-5xl h-[85vh] flex overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Main Editor Section - Full Width */}
-          <div className={`flex flex-col w-full overflow-hidden ${isFocusMode ? 'h-full' : ''}`}>
+          {/* Two-column layout when AI Chat is visible */}
+          <div className={`flex ${isAIChatVisible ? 'flex-row' : 'flex-col'} w-full h-full overflow-hidden`}>
+            {/* Docked AI Chat on the left */}
+            {isAIChatVisible && (
+              <div className="w-[380px] min-w-[340px] max-w-[420px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <AIChatPanel
+                  note={{ ...note, title, content, tags }}
+                  onReplaceContent={handleReplaceContent}
+                  onInsertContent={handleInsertContent}
+                />
+              </div>
+            )}
+            {/* Main Editor Section */}
+            <div className={`flex flex-col ${isAIChatVisible ? 'flex-1' : 'w-full'} overflow-hidden ${isFocusMode ? 'h-full' : ''}`}>
           {/* Header */}
           {!isFocusMode && (
           <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-3">
@@ -668,75 +617,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
           )}
           </div>
-          
-          {/* Focus Mode Exit Hint */}
-          {isFocusMode && (
-            <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
-              Press ESC to exit Focus Mode
-            </div>
-          )}
+          </div>
         </div>
+
+        {/* Focus Mode Exit Hint */}
+        {isFocusMode && (
+          <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
+            Press ESC to exit Focus Mode
+          </div>
+        )}
       </div>
-      
-      {/* Floating AI Chat Panel */}
-      {isAIChatVisible && (
-        <div
-          ref={chatPanelRef}
-          className="fixed z-[100] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
-          style={{
-            left: `${chatPanelPosition.x}px`,
-            top: `${chatPanelPosition.y}px`,
-            width: `${chatPanelSize.width}px`,
-            height: `${chatPanelSize.height}px`,
-            cursor: isDragging ? 'grabbing' : 'default',
-          }}
-        >
-          {/* Draggable Header */}
-          <div
-            className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-accent-50 to-white dark:from-accent-900/20 dark:to-gray-900 cursor-grab active:cursor-grabbing"
-            onMouseDown={handleStartDrag}
-          >
-            <div className="flex items-center gap-2 pointer-events-none">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-3.5 h-3.5 text-gray-900" />
-              </div>
-              <div>
-                <h3 className="font-display font-semibold text-sm text-gray-900 dark:text-gray-100">
-                  AI Co-Pilot
-                </h3>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsAIChatVisible(false)}
-                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                title="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          
-          {/* Chat Content */}
-          <div className="flex-1 overflow-hidden">
-            <AIChatPanel
-              note={{ ...note, title, content, tags }}
-              onReplaceContent={handleReplaceContent}
-              onInsertContent={handleInsertContent}
-            />
-          </div>
-          
-          {/* Resize Handle */}
-          <div
-            className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize group"
-            onMouseDown={handleStartResize}
-          >
-            <div className="absolute bottom-1 right-1">
-              <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 rotate-90" />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
