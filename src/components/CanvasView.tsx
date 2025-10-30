@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react'
+import { useCallback, useMemo, useState, useEffect, useRef, memo } from 'react'
 import {
   ReactFlow,
   Node,
@@ -36,8 +36,87 @@ interface CanvasViewProps {
   onDeleteNote: (id: string) => void
 }
 
-// Custom Note Node Component with "Light from Sky" design principle
-function NoteNode({ data }: { data: any }) {
+// Helper function to strip HTML tags for preview
+function stripHtmlTags(html: string): string {
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
+// Custom Note Node Component with inline editing capability
+const NoteNode = memo(({ data }: { data: any }) => {
+  const [title, setTitle] = useState(data.title || 'Untitled')
+  const [content, setContent] = useState(() => {
+    return data.content ? stripHtmlTags(data.content) : ''
+  })
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [isEditingContent, setIsEditingContent] = useState(false)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const contentRef = useRef<HTMLTextAreaElement>(null)
+  const saveTimeoutRef = useRef<NodeJS.Timeout>()
+  const isEditingRef = useRef(false)
+
+  // Track editing state
+  useEffect(() => {
+    isEditingRef.current = isEditingTitle || isEditingContent
+  }, [isEditingTitle, isEditingContent])
+
+  // Sync with props only when not editing
+  useEffect(() => {
+    if (!isEditingRef.current) {
+      setTitle(data.title || 'Untitled')
+      setContent(data.content ? stripHtmlTags(data.content) : '')
+    }
+  }, [data.title, data.content])
+
+  // Auto-save with debounce
+  useEffect(() => {
+    // Skip auto-save if we're not editing
+    if (!isEditingRef.current) return
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      if (data.onUpdate) {
+        data.onUpdate({ title, content })
+      }
+    }, 1000)
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [title, content, data])
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsEditingTitle(true)
+    setTimeout(() => titleRef.current?.focus(), 0)
+  }
+
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsEditingContent(true)
+    setTimeout(() => contentRef.current?.focus(), 0)
+  }
+
+  const handleTitleBlur = () => {
+    setIsEditingTitle(false)
+    if (data.onUpdate) {
+      data.onUpdate({ title, content })
+    }
+  }
+
+  const handleContentBlur = () => {
+    setIsEditingContent(false)
+    if (data.onUpdate) {
+      data.onUpdate({ title, content })
+    }
+  }
+
   return (
     <>
       {/* Resize handles - subtle, elegant, minimal (matches "Light from Sky" aesthetic) */}
@@ -60,7 +139,7 @@ function NoteNode({ data }: { data: any }) {
         }}
       />
       <div
-        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden"
+        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden flex flex-col"
         style={{
           willChange: 'transform, box-shadow',
           transform: 'translate3d(0, 0, 0)',
@@ -105,9 +184,32 @@ function NoteNode({ data }: { data: any }) {
         style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
       />
       
-      <div className="flex items-start justify-between mb-4">
-        <h4 className="font-display font-semibold text-base line-clamp-2 flex-1 text-gray-900 dark:text-gray-100 tracking-tight">{data.title || 'Untitled'}</h4>
-        <div className="flex gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div className="flex items-start justify-between mb-4 flex-shrink-0">
+        {isEditingTitle ? (
+          <input
+            ref={titleRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleTitleBlur}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleTitleBlur()
+              }
+            }}
+            className="font-display font-semibold text-lg flex-1 text-gray-900 dark:text-gray-100 tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
+          />
+        ) : (
+          <h4
+            className="font-display font-semibold text-lg line-clamp-2 flex-1 text-gray-900 dark:text-gray-100 tracking-tight cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
+            onClick={handleTitleClick}
+          >
+            {title || 'Untitled'}
+          </h4>
+        )}
+        <div className="flex gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -131,22 +233,37 @@ function NoteNode({ data }: { data: any }) {
         </div>
       </div>
       {data.tags && data.tags.length > 0 && (
-        <div className="mb-4">
+        <div className="mb-4 flex-shrink-0">
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
         </div>
       )}
-      {data.content && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
-          {data.content}
-        </p>
-      )}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 font-medium">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {isEditingContent ? (
+          <textarea
+            ref={contentRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onBlur={handleContentBlur}
+            onClick={(e) => e.stopPropagation()}
+            className="text-base text-gray-600 dark:text-gray-400 leading-relaxed flex-1 bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1 resize-none"
+            placeholder="Click to add content..."
+          />
+        ) : (
+          <p
+            className="text-base text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed flex-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
+            onClick={handleContentClick}
+          >
+            {content || 'Click to add content...'}
+          </p>
+        )}
+      </div>
+      <p className="text-sm text-gray-400 dark:text-gray-500 mt-auto pt-4 font-medium flex-shrink-0">
         {new Date(data.updatedAt).toLocaleDateString()}
       </p>
       </div>
     </>
   )
-}
+})
 
 const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
@@ -180,6 +297,22 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
   
+  // Handle inline note updates
+  const handleNoteUpdate = useCallback(async (noteId: string, updates: { title?: string; content?: string }) => {
+    try {
+      const note = notes.find(n => n.id === noteId)
+      if (!note) return
+
+      const now = new Date().toISOString()
+      await db.notes.update(noteId, {
+        title: updates.title !== undefined ? updates.title : note.title,
+        content: updates.content !== undefined ? updates.content : note.content,
+        updatedAt: now,
+      })
+    } catch (error) {
+      console.error('Failed to update note:', error)
+    }
+  }, [notes])
 
   // Convert notes to React Flow nodes
   const initialNodes: Node[] = useMemo(
@@ -203,9 +336,10 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
           updatedAt: note.updatedAt,
           onEdit: () => onEditNote(note),
           onDelete: () => onDeleteNote(note.id),
+          onUpdate: (updates: { title?: string; content?: string }) => handleNoteUpdate(note.id, updates),
         },
       })),
-    [notes, onEditNote, onDeleteNote]
+    [notes, onEditNote, onDeleteNote, handleNoteUpdate]
   )
 
   // Convert database edges to React Flow edges with softer, organic styling

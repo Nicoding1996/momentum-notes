@@ -51,7 +51,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     },
     editorProps: {
       attributes: {
-        class: 'editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 text-base leading-relaxed text-gray-900 dark:text-gray-100 prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none max-w-none',
+        class: 'editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 text-lg leading-relaxed text-gray-900 dark:text-gray-100 prose prose-lg sm:prose-lg lg:prose-xl xl:prose-2xl focus:outline-none max-w-none',
       },
     },
   })
