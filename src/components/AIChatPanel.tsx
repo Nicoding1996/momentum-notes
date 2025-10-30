@@ -104,22 +104,35 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
     try {
       const context = `Note Title: "${note.title}"\n\nNote Content:\n${note.content}`
       
-      // Use AI to determine intent
-      const prompt = `${context}
+      // Build conversation history (last 3 messages for context)
+      const recentMessages = messages.slice(-3)
+      let conversationHistory = ''
+      if (recentMessages.length > 0) {
+        conversationHistory = '\n\nRecent Conversation:\n'
+        recentMessages.forEach(msg => {
+          const role = msg.role === 'user' ? 'USER' : 'ASSISTANT'
+          conversationHistory += `${role}: ${msg.content}\n`
+        })
+      }
+      
+      // Use AI to determine intent with conversation context
+      const prompt = `${context}${conversationHistory}
 
-User request: ${userMessage.content}
+Current User Request: ${userMessage.content}
 
 ---
-TASK: Analyze the user's request and respond with:
+TASK: Analyze the user's request (considering the conversation history if present) and respond with:
 1. First line MUST be exactly one of: INTENT:REPLACE or INTENT:ADD or INTENT:INFO
    - REPLACE: User wants to modify/rewrite/change existing content
    - ADD: User wants to add new information/facts/content
    - INFO: User is asking a question or needs explanation (no content changes)
 2. Following lines: Provide the content to fulfill the request
 
-IMPORTANT:
+IMPORTANT CONTEXT RULES:
+- If user says "add it" or "insert that" or uses pronouns referring to previous content, use the content from the recent conversation
+- If user asks for new content, generate new content
 - For REPLACE: Provide ONLY the modified version of the entire note content
-- For ADD: Provide ONLY new content to be added (formatted and ready to insert)
+- For ADD: Provide ONLY new content to be added (formatted and ready to insert) - if referring to previous conversation, use that content
 - For INFO: Provide a helpful conversational response
 
 Begin your response now:`
