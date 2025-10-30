@@ -65,15 +65,18 @@ function App() {
     const defaultX = (noteCount % 4) * 350 + 50
     const defaultY = Math.floor(noteCount / 4) * 250 + 50
     
+    // Add a cascade offset (20px down and right for each note) to make multiple notes visible
+    const cascadeOffset = (noteCount % 5) * 20 // Reset offset every 5 notes
+    
     const newNote: Note = {
       id,
       title: 'Untitled Note',
       content: '',
       createdAt: now,
       updatedAt: now,
-      // Place new note at the center of the current viewport if available
-      x: viewportCenter ? Math.round(viewportCenter.x - 140) : defaultX,
-      y: viewportCenter ? Math.round(viewportCenter.y - 120) : defaultY,
+      // Place new note at the center of the current viewport with cascade offset
+      x: viewportCenter ? Math.round(viewportCenter.x - 140 + cascadeOffset) : defaultX,
+      y: viewportCenter ? Math.round(viewportCenter.y - 120 + cascadeOffset) : defaultY,
     }
     await db.notes.add(newNote)
   }
