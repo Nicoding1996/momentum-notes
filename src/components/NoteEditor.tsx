@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3 } from 'lucide-react'
+import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3, ChevronDown, Maximize2, GripVertical } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -24,9 +24,18 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [selectedText, setSelectedText] = useState('')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
+  const [showAIToolsDropdown, setShowAIToolsDropdown] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [chatPanelPosition, setChatPanelPosition] = useState({ x: 0, y: 100 })
+  const [chatPanelSize, setChatPanelSize] = useState({ width: 400, height: 500 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const chatPanelRef = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
 
@@ -89,6 +98,14 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }, [title, content, hasUnsavedChanges])
 
+  // Initialize chat panel position (top-right corner)
+  useEffect(() => {
+    if (isAIChatVisible && chatPanelPosition.x === 0) {
+      const windowWidth = window.innerWidth
+      setChatPanelPosition({ x: windowWidth - chatPanelSize.width - 50, y: 100 })
+    }
+  }, [isAIChatVisible])
+
   // Focus textarea on mount
   useEffect(() => {
     textareaRef.current?.focus()
@@ -102,13 +119,64 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
         handleSave()
       }
       if (e.key === 'Escape') {
-        handleClose()
+        if (isFocusMode) {
+          setIsFocusMode(false)
+        } else {
+          handleClose()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [title, content, hasUnsavedChanges])
+  }, [title, content, hasUnsavedChanges, isFocusMode])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowAIToolsDropdown(false)
+      }
+    }
+
+    if (showAIToolsDropdown) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showAIToolsDropdown])
+
+  // Handle dragging
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setChatPanelPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y,
+        })
+      }
+      if (isResizing && chatPanelRef.current) {
+        const rect = chatPanelRef.current.getBoundingClientRect()
+        setChatPanelSize({
+          width: Math.max(350, e.clientX - rect.left),
+          height: Math.max(400, e.clientY - rect.top),
+        })
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+      setIsResizing(false)
+    }
+
+    if (isDragging || isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isDragging, isResizing, dragOffset])
 
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
@@ -233,12 +301,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   // AI Chat handlers
   const handleReplaceContent = (newContent: string) => {
     setContent(newContent)
-    setIsAIChatVisible(false)
   }
 
   const handleInsertContent = (contentToInsert: string) => {
     setContent(content + '\n\n' + contentToInsert)
-    setIsAIChatVisible(false)
+  }
+
+  const handleStartDrag = (e: React.MouseEvent) => {
+    if (chatPanelRef.current) {
+      const rect = chatPanelRef.current.getBoundingClientRect()
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      })
+      setIsDragging(true)
+    }
+  }
+
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsResizing(true)
   }
 
   const charCount = content.length
@@ -255,34 +337,35 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
-          className={`modal w-full ${isAIChatVisible ? 'max-w-7xl' : 'max-w-5xl'} max-h-[90vh] flex ${isAIChatVisible ? 'flex-row' : 'flex-col'} overflow-hidden`}
+          className="modal w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Main Editor Section */}
-          <div className={`flex flex-col ${isAIChatVisible ? 'flex-1' : 'w-full'} overflow-hidden`}>
+          {/* Main Editor Section - Full Width */}
+          <div className={`flex flex-col w-full overflow-hidden ${isFocusMode ? 'h-full' : ''}`}>
           {/* Header */}
-          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1 mr-6">
+          {!isFocusMode && (
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Note title"
-                  className="w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 tracking-tight"
+                  className="w-full text-xl font-bold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 tracking-tight"
                 />
               </div>
               <button
                 onClick={handleClose}
-                className="btn-icon"
+                className="btn-icon flex-shrink-0"
                 aria-label="Close editor"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            {/* Tags Input */}
-            <div className="mt-4">
+            {/* Tags Input - Compact */}
+            <div className="mt-2">
               <TagInput
                 tags={tags}
                 onChange={setTags}
@@ -290,59 +373,86 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               />
             </div>
           </div>
+          )}
 
           {/* AI Toolbar */}
-          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-4 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
+          {!isFocusMode && (
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-2.5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
             {aiStatus.available ? (
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Tools</span>
-                </div>
-                
-                {/* AI Chat Toggle Button */}
+                {/* AI Chat Button - Primary Action */}
                 <button
                   onClick={() => setIsAIChatVisible(!isAIChatVisible)}
-                  className={`btn text-sm ${
-                    isAIChatVisible
-                      ? 'bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 shadow-glow-accent'
-                      : 'btn-secondary'
-                  }`}
-                  title="Toggle AI Chat Assistant"
+                  className="btn bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 shadow-glow-accent text-sm relative overflow-hidden group"
+                  title="Open AI Chat Assistant"
                 >
-                  <Sparkles className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4 group-hover:animate-pulse" />
                   AI Chat
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 </button>
                 
                 <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
                 
-                <button
-                  onClick={handleAIExpand}
-                  disabled={aiLoading || !selectedText}
-                  className="btn btn-secondary text-sm disabled:opacity-40"
-                  title="Expand selected text"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Expand
-                </button>
-                <button
-                  onClick={handleAISummarize}
-                  disabled={aiLoading}
-                  className="btn btn-secondary text-sm disabled:opacity-40"
-                  title="Summarize"
-                >
-                  <FileText className="w-4 h-4" />
-                  Summarize
-                </button>
-                <button
-                  onClick={handleAIImprove}
-                  disabled={aiLoading || !selectedText}
-                  className="btn btn-secondary text-sm disabled:opacity-40"
-                  title="Improve selected text"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  Improve
-                </button>
+                {/* AI Tools Dropdown */}
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setShowAIToolsDropdown(!showAIToolsDropdown)}
+                    className="btn btn-secondary text-sm"
+                    title="Quick AI Actions"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    AI Tools
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showAIToolsDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {/* Dropdown Menu */}
+                  {showAIToolsDropdown && (
+                    <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden animate-in">
+                      <button
+                        onClick={() => {
+                          handleAIExpand()
+                          setShowAIToolsDropdown(false)
+                        }}
+                        disabled={aiLoading || !selectedText}
+                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Expand</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Expand selected text</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleAISummarize()
+                          setShowAIToolsDropdown(false)
+                        }}
+                        disabled={aiLoading}
+                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-gray-100 dark:border-gray-700"
+                      >
+                        <FileText className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Summarize</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Create a summary</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleAIImprove()
+                          setShowAIToolsDropdown(false)
+                        }}
+                        disabled={aiLoading || !selectedText}
+                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-gray-100 dark:border-gray-700"
+                      >
+                        <Wand2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Improve</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Enhance selected text</div>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Voice Button */}
                 {voiceStatus.supported && (
@@ -421,43 +531,56 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               </div>
             )}
           </div>
+          )}
 
-          {/* Editor Mode Toggle */}
-          <div className="flex items-center justify-between px-8 pt-6 pb-4">
-            <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden p-1 bg-gray-100/50 dark:bg-gray-800/50">
+          {/* Editor Mode Toggle & Focus Mode Button */}
+          {!isFocusMode && (
+          <div className="flex items-center justify-between px-6 py-3">
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0.5 bg-gray-100/50 dark:bg-gray-800/50">
               <button
                 onClick={() => setMode('write')}
-                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
                   mode === 'write'
                     ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
                 aria-pressed={mode === 'write'}
               >
-                <div className="flex items-center gap-2">
-                  <Edit3 className="w-4 h-4" />
+                <div className="flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5" />
                   Write
                 </div>
               </button>
               <button
                 onClick={() => setMode('preview')}
-                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
                   mode === 'preview'
                     ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
                 aria-pressed={mode === 'preview'}
               >
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4" />
+                <div className="flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
                   Preview
                 </div>
               </button>
             </div>
+            
+            {/* Focus Mode Toggle */}
+            <button
+              onClick={() => setIsFocusMode(true)}
+              className="btn btn-ghost text-xs px-3 py-1.5"
+              title="Enter Focus Mode (Esc to exit)"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              Focus
+            </button>
           </div>
+          )}
 
           {/* Editor Content */}
-          <div className="flex-1 overflow-hidden px-8">
+          <div className={`overflow-hidden ${isFocusMode ? 'flex-1 h-full px-8 py-6' : 'flex-1 px-6 py-3'}`}>
             {mode === 'write' ? (
               <textarea
                 ref={textareaRef}
@@ -470,10 +593,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 }}
                 onSelect={handleTextSelect}
                 placeholder="Start writing your note..."
-                className="w-full h-full bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 custom-scrollbar py-4"
+                className="w-full h-full bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 custom-scrollbar"
               />
             ) : (
-              <div className="h-full overflow-y-auto py-4 custom-scrollbar">
+              <div className="h-full min-h-[400px] overflow-y-auto custom-scrollbar">
                 <div className="prose-custom">
                   <ReactMarkdown
                     components={{
@@ -498,7 +621,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-gray-200/60 dark:border-gray-800/60 px-8 py-5 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-900/50">
+          {!isFocusMode && (
+          <div className="flex items-center justify-between border-t border-gray-200/60 dark:border-gray-800/60 px-6 py-3 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-900/50">
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
               <span className="flex items-center gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{wordCount}</span>
@@ -542,20 +666,77 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               </button>
             </div>
           </div>
+          )}
           </div>
           
-          {/* AI Chat Panel */}
-          {isAIChatVisible && (
-            <div className="w-96 border-l border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-              <AIChatPanel
-                note={{ ...note, title, content, tags }}
-                onReplaceContent={handleReplaceContent}
-                onInsertContent={handleInsertContent}
-              />
+          {/* Focus Mode Exit Hint */}
+          {isFocusMode && (
+            <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
+              Press ESC to exit Focus Mode
             </div>
           )}
         </div>
       </div>
+      
+      {/* Floating AI Chat Panel */}
+      {isAIChatVisible && (
+        <div
+          ref={chatPanelRef}
+          className="fixed z-[100] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+          style={{
+            left: `${chatPanelPosition.x}px`,
+            top: `${chatPanelPosition.y}px`,
+            width: `${chatPanelSize.width}px`,
+            height: `${chatPanelSize.height}px`,
+            cursor: isDragging ? 'grabbing' : 'default',
+          }}
+        >
+          {/* Draggable Header */}
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-accent-50 to-white dark:from-accent-900/20 dark:to-gray-900 cursor-grab active:cursor-grabbing"
+            onMouseDown={handleStartDrag}
+          >
+            <div className="flex items-center gap-2 pointer-events-none">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-3.5 h-3.5 text-gray-900" />
+              </div>
+              <div>
+                <h3 className="font-display font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  AI Co-Pilot
+                </h3>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsAIChatVisible(false)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Chat Content */}
+          <div className="flex-1 overflow-hidden">
+            <AIChatPanel
+              note={{ ...note, title, content, tags }}
+              onReplaceContent={handleReplaceContent}
+              onInsertContent={handleInsertContent}
+            />
+          </div>
+          
+          {/* Resize Handle */}
+          <div
+            className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize group"
+            onMouseDown={handleStartResize}
+          >
+            <div className="absolute bottom-1 right-1">
+              <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 rotate-90" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
