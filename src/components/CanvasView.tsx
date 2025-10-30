@@ -33,75 +33,91 @@ interface CanvasViewProps {
   onDeleteNote: (id: string) => void
 }
 
-// Custom Note Node Component with hardware acceleration
+// Custom Note Node Component with "Light from Sky" design principle
 function NoteNode({ data }: { data: any }) {
   return (
     <div
-      className="bg-white dark:bg-gray-900 border-2 border-gray-200/80 dark:border-gray-700/80 rounded-2xl shadow-lg hover:shadow-xl p-5 min-w-[220px] max-w-[320px] relative group transition-all duration-200 hover:-translate-y-1"
-      style={{ willChange: 'transform', transform: 'translate3d(0, 0, 0)' }}
+      className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 min-w-[240px] max-w-[340px] relative group transition-all duration-300 ease-out"
+      style={{
+        willChange: 'transform, box-shadow',
+        transform: 'translate3d(0, 0, 0)',
+        boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
+        e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
+        e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+      }}
     >
-      {/* Connection handles */}
+      {/* Connection handles - Accent color for visibility */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
-        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
+        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
+        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
+        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
+        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
+        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
+        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
+        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
+        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
       />
       
-      <div className="flex items-start justify-between mb-3">
-        <h4 className="font-semibold text-sm line-clamp-2 flex-1 text-gray-900 dark:text-gray-100">{data.title || 'Untitled'}</h4>
-        <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-start justify-between mb-4">
+        <h4 className="font-display font-semibold text-base line-clamp-2 flex-1 text-gray-900 dark:text-gray-100 tracking-tight">{data.title || 'Untitled'}</h4>
+        <div className="flex gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => {
               e.stopPropagation()
               data.onEdit()
             }}
-            className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150"
             aria-label="Edit note"
           >
-            <Edit className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
+            <Edit className="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation()
               data.onDelete()
             }}
-            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-150"
             aria-label="Delete note"
           >
-            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+            <Trash2 className="w-4 h-4 text-red-500" />
           </button>
         </div>
       </div>
       {data.tags && data.tags.length > 0 && (
-        <div className="mb-3">
+        <div className="mb-4">
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
         </div>
       )}
       {data.content && (
-        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mt-2 leading-relaxed">
+        <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed">
           {data.content}
         </p>
       )}
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 font-medium">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 font-medium">
         {new Date(data.updatedAt).toLocaleDateString()}
       </p>
     </div>
@@ -154,7 +170,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     [notes, onEditNote, onDeleteNote]
   )
 
-  // Convert database edges to React Flow edges with styling
+  // Convert database edges to React Flow edges with softer, organic styling
   const initialEdges: Edge[] = useMemo(
     () =>
       filteredNoteEdges.map((edge) => {
@@ -169,8 +185,9 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
           label: relationshipType?.label || edge.label,
           animated: false,
           style: {
-            stroke: relationshipType?.color || '#94a3b8',
-            strokeWidth: 2,
+            stroke: relationshipType?.color || '#a3a3a3',
+            strokeWidth: 1.5,
+            opacity: 0.6,
           },
           type: 'smoothstep',
           data: {
@@ -516,15 +533,24 @@ Return ONLY the JSON array, no other text:`
               )}
             </div>
             
-            {/* AI Auto-Link Button */}
+            {/* AI Auto-Link Button - Special & Unique Design */}
             {status.available && notes.length >= 2 && (
               <button
                 onClick={handleAutoLink}
                 disabled={isAutoLinking}
-                className="btn bg-gradient-to-br from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-sm disabled:opacity-50"
+                className="relative inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-display font-semibold text-sm bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-glow-accent active:scale-95"
+                style={{
+                  boxShadow: '0 -1px 2px 0 rgba(255, 255, 255, 0.3) inset, 0 4px 12px -2px rgba(255, 215, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.1)',
+                  willChange: 'transform, box-shadow',
+                }}
               >
-                <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
-                {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link'}
+                <Sparkles className={`w-5 h-5 ${isAutoLinking ? 'animate-spin' : 'animate-pulse-slow'}`} />
+                <span>{isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link'}</span>
+                {!isAutoLinking && (
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"
+                    style={{ backgroundSize: '200% 100%' }}
+                  />
+                )}
               </button>
             )}
           </div>
@@ -540,8 +566,9 @@ Return ONLY the JSON array, no other text:`
             animated: edge.id === selectedEdge,
             style: {
               ...edge.style,
-              stroke: edge.id === selectedEdge ? '#ef4444' : edge.style?.stroke,
-              strokeWidth: edge.id === selectedEdge ? 3 : 2,
+              stroke: edge.id === selectedEdge ? '#f96167' : edge.style?.stroke,
+              strokeWidth: edge.id === selectedEdge ? 2.5 : 1.5,
+              opacity: edge.id === selectedEdge ? 1 : 0.6,
             },
           }))}
           onNodesChange={onNodesChange}

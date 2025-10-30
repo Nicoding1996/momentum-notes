@@ -108,32 +108,40 @@ function App() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
+            {/* View Mode Toggle - Enhanced Design */}
             {notes && notes.length > 0 && (
-              <div className="hidden sm:flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800/50 rounded-xl mr-2">
+              <div className="hidden sm:flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-800/60 rounded-xl mr-2 border border-gray-200/50 dark:border-gray-700/50">
                 <button
                   onClick={() => setViewMode('canvas')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
+                  className={`px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium text-sm ${
                     viewMode === 'canvas'
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
                   }`}
+                  style={viewMode === 'canvas' ? {
+                    boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                  } : {}}
                   aria-label="Canvas view"
-                  title="Canvas View"
+                  title="Canvas View - Visual connections"
                 >
                   <Grid className="w-4 h-4" />
+                  <span>Canvas</span>
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-all duration-200 ${
+                  className={`px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 font-medium text-sm ${
                     viewMode === 'list'
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400'
+                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-200/50 dark:hover:bg-gray-700/50'
                   }`}
+                  style={viewMode === 'list' ? {
+                    boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                  } : {}}
                   aria-label="List view"
-                  title="List View"
+                  title="Grid View - Browse all notes"
                 >
                   <List className="w-4 h-4" />
+                  <span>Grid</span>
                 </button>
               </div>
             )}
@@ -261,15 +269,27 @@ function App() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {notes.map((note) => (
                       <div
                         key={note.id}
-                        className="card-hover p-6 cursor-pointer group"
+                        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 cursor-pointer group transition-all duration-300 ease-out"
+                        style={{
+                          willChange: 'transform, box-shadow',
+                          boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
+                          e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
+                          e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+                        }}
                         onClick={() => openEditor(note)}
                       >
-                        <div className="flex items-start justify-between mb-3">
-                          <h3 className="font-semibold text-base line-clamp-2 flex-1 text-gray-900 dark:text-gray-100">
+                        <div className="flex items-start justify-between mb-4">
+                          <h3 className="font-display font-semibold text-lg line-clamp-2 flex-1 text-gray-900 dark:text-gray-100 tracking-tight">
                             {note.title || 'Untitled'}
                           </h3>
                           <button
@@ -277,7 +297,7 @@ function App() {
                               e.stopPropagation()
                               deleteNote(note.id)
                             }}
-                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all focus-ring"
+                            className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-150 focus-ring ml-2"
                             aria-label="Delete note"
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -285,19 +305,19 @@ function App() {
                         </div>
                         
                         {note.tags && note.tags.length > 0 && (
-                          <div className="mb-3">
+                          <div className="mb-4">
                             <TagDisplay tagIds={note.tags} maxDisplay={3} />
                           </div>
                         )}
                         
                         {note.content && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-4 leading-relaxed">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4 leading-relaxed">
                             {note.content}
                           </p>
                         )}
                         
                         <div className="flex items-center justify-between text-xs pt-4 border-t border-gray-100 dark:border-gray-800">
-                          <time 
+                          <time
                             dateTime={note.updatedAt}
                             className="text-gray-500 dark:text-gray-500 font-medium"
                           >
@@ -307,7 +327,7 @@ function App() {
                               year: 'numeric'
                             })}
                           </time>
-                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-primary-600 dark:text-primary-400 font-medium">
+                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-accent-600 dark:text-accent-400 font-semibold flex items-center gap-1">
                             Open →
                           </span>
                         </div>
