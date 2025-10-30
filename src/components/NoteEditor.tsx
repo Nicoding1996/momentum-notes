@@ -29,9 +29,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [contentHistory, setContentHistory] = useState<string[]>([])
-  const interimStartPosRef = useRef<number | null>(null)
-  const contentBeforeInterimRef = useRef<string>('')
-  const cursorPositionRef = useRef<number>(0)
+  const interimTranscriptRef = useRef<string>('')
+  const lastInterimLengthRef = useRef<number>(0)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
@@ -73,69 +72,62 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     elementRef: textareaRef
   })
 
-  // Voice transcription
+  // Voice transcription - updated to work with Tiptap editor with live display
   const handleTranscript = (text: string, isFinal: boolean) => {
     const trimmedText = text.trim()
-    if (!trimmedText) return
+    if (!trimmedText || !editor) return
 
     if (isFinal) {
-      setContent((prev) => {
-        // Use the stored start position from when recording began
-        const insertPos = interimStartPosRef.current ?? cursorPositionRef.current
-        
-        // Get the original content parts (before any interim text was shown)
-        const before = contentBeforeInterimRef.current
-          ? contentBeforeInterimRef.current.substring(0, insertPos)
-          : prev.substring(0, insertPos)
-        
-        const after = contentBeforeInterimRef.current
-          ? contentBeforeInterimRef.current.substring(insertPos)
-          : prev.substring(insertPos)
-        
-        // Smart spacing: add space before if needed and content exists before cursor
-        const needsSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')
-        const spaceBefore = needsSpaceBefore ? ' ' : ''
-        
-        // Calculate new cursor position after insertion
-        const newPos = insertPos + spaceBefore.length + trimmedText.length
-        
-        const result = before + spaceBefore + trimmedText + after
-        
-        // Reset refs for next transcription
-        interimStartPosRef.current = null
-        contentBeforeInterimRef.current = ''
-        
-        // Update cursor position and move cursor to the new position after insertion
-        setTimeout(() => {
-          cursorPositionRef.current = newPos
-          if (textareaRef.current) {
-            textareaRef.current.selectionStart = newPos
-            textareaRef.current.selectionEnd = newPos
-            textareaRef.current.focus()
-          }
-        }, 0)
-        
-        return result
-      })
+      // First, remove any interim text that was showing
+      if (lastInterimLengthRef.current > 0) {
+        // Delete the interim text by selecting backwards and deleting
+        const { from } = editor.state.selection
+        const deleteFrom = from - lastInterimLengthRef.current
+        editor.chain()
+          .setTextSelection({ from: deleteFrom, to: from })
+          .deleteSelection()
+          .run()
+      }
+      
+      // Now insert the final text
+      const contentBefore = editor.getText()
+      const needsSpace = contentBefore.length > 0 &&
+                        !contentBefore.endsWith(' ') &&
+                        !contentBefore.endsWith('\n')
+      
+      const textToInsert = needsSpace ? ' ' + trimmedText : trimmedText
+      
+      // Insert at current cursor position
+      editor.chain().focus().insertContent(textToInsert).run()
+      
+      // Clear interim tracking
+      interimTranscriptRef.current = ''
+      lastInterimLengthRef.current = 0
     } else {
-      setContent((prev) => {
-        // Store the starting position and original content for interim results (only once per phrase)
-        if (interimStartPosRef.current === null) {
-          interimStartPosRef.current = cursorPositionRef.current
-          contentBeforeInterimRef.current = prev
-        }
-        
-        const insertPos = interimStartPosRef.current
-        // Get the original content parts
-        const before = contentBeforeInterimRef.current.substring(0, insertPos)
-        const after = contentBeforeInterimRef.current.substring(insertPos)
-        
-        // Smart spacing: add space before if needed
-        const needsSpaceBefore = before.length > 0 && !before.endsWith(' ') && !before.endsWith('\n')
-        const spaceBefore = needsSpaceBefore ? ' ' : ''
-        
-        return before + spaceBefore + trimmedText + after
-      })
+      // For interim results, show them live
+      // If we had previous interim text, delete it first
+      if (lastInterimLengthRef.current > 0) {
+        const { from } = editor.state.selection
+        const deleteFrom = from - lastInterimLengthRef.current
+        editor.chain()
+          .setTextSelection({ from: deleteFrom, to: from })
+          .deleteSelection()
+          .run()
+      }
+      
+      // Insert the new interim text
+      const contentBefore = editor.getText()
+      const needsSpace = contentBefore.length > 0 &&
+                        !contentBefore.endsWith(' ') &&
+                        !contentBefore.endsWith('\n')
+      
+      const textToInsert = needsSpace ? ' ' + trimmedText : trimmedText
+      
+      editor.chain().focus().insertContent(textToInsert).run()
+      
+      // Track the interim text for next update
+      interimTranscriptRef.current = trimmedText
+      lastInterimLengthRef.current = textToInsert.length
     }
   }
 
@@ -146,18 +138,21 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     language: 'en-US',
   })
 
-  // Handle recording start - capture cursor position at the moment recording begins
+  // Handle recording start
   const handleStartRecording = () => {
-    // Capture current cursor position before starting
-    if (textareaRef.current) {
-      cursorPositionRef.current = textareaRef.current.selectionStart
+    // Focus the editor before starting recording
+    if (editor) {
+      editor.chain().focus().run()
     }
     startRecording()
   }
 
-  // Handle recording stop - allow cursor updates again
+  // Handle recording stop
   const handleStopRecording = () => {
     stopRecording()
+    // Clear any remaining interim transcript
+    interimTranscriptRef.current = ''
+    lastInterimLengthRef.current = 0
   }
 
   // Handle recording toggle
