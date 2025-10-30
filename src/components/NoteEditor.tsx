@@ -26,6 +26,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [showAIToolsDropdown, setShowAIToolsDropdown] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
+  const [contentHistory, setContentHistory] = useState<string[]>([])
   const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -251,13 +252,30 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }
 
-  // AI Chat handlers
+  // AI Chat handlers with undo support
   const handleReplaceContent = (newContent: string) => {
+    // Save current content to history before replacing
+    setContentHistory(prev => [...prev, content])
     setContent(newContent)
   }
 
   const handleInsertContent = (contentToInsert: string) => {
+    // Save current content to history before inserting
+    setContentHistory(prev => [...prev, content])
     setContent(content + '\n\n' + contentToInsert)
+  }
+
+  const handleUndo = () => {
+    if (contentHistory.length === 0) return
+    
+    // Get the last saved content
+    const previousContent = contentHistory[contentHistory.length - 1]
+    
+    // Remove it from history
+    setContentHistory(prev => prev.slice(0, -1))
+    
+    // Restore the content
+    setContent(previousContent)
   }
 
   const charCount = content.length
@@ -286,6 +304,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   note={{ ...note, title, content, tags }}
                   onReplaceContent={handleReplaceContent}
                   onInsertContent={handleInsertContent}
+                  onUndo={handleUndo}
+                  canUndo={contentHistory.length > 0}
                 />
               </div>
             )}

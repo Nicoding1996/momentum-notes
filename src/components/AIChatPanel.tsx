@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Sparkles, Loader2, Check, Copy } from 'lucide-react'
+import { Send, Sparkles, Loader2, Check, Copy, Undo2 } from 'lucide-react'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import type { Note } from '@/types/note'
 
@@ -7,6 +7,8 @@ interface AIChatPanelProps {
   note: Note
   onReplaceContent: (newContent: string) => void
   onInsertContent: (contentToInsert: string) => void
+  onUndo?: () => void
+  canUndo?: boolean
 }
 
 interface Message {
@@ -14,9 +16,10 @@ interface Message {
   content: string
   timestamp: Date
   isActionable?: boolean
+  intent?: 'REPLACE' | 'ADD' | 'INFO'
 }
 
-export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatPanelProps) {
+export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, canUndo }: AIChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
@@ -95,49 +98,56 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
     }
 
     setMessages((prev) => [...prev, userMessage])
-    const userCommand = input.trim().toLowerCase()
     setInput('')
     setIsProcessing(true)
 
     try {
       const context = `Note Title: "${note.title}"\n\nNote Content:\n${note.content}`
       
-      const modificationKeywords = [
-        'rewrite', 'make', 'change', 'improve', 'expand', 'shorten',
-        'professional', 'casual', 'formal', 'simplify', 'enhance',
-        'refine', 'polish', 'rephrase', 'restructure'
-      ]
-      
-      const suggestionKeywords = [
-        'what else', 'suggest', 'add', 'more', 'other', 'additional',
-        'ideas', 'facts', 'examples', 'details', 'points', 'topics',
-        'include', 'could i', 'should i', 'can i add'
-      ]
-      
-      const isModificationRequest = modificationKeywords.some(keyword => userCommand.includes(keyword))
-      const isSuggestionRequest = suggestionKeywords.some(keyword => userCommand.includes(keyword))
-      
-      let prompt: string
-      let systemPrompt: string
-      
-      if (isModificationRequest) {
-        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide ONLY the modified version of the note content. Do not include any explanations, just the rewritten text.`
-        systemPrompt = 'You are a helpful AI assistant that rewrites and modifies text. When asked to modify text, provide ONLY the modified version without any explanations or preamble.'
-      } else if (isSuggestionRequest) {
-        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide specific, actionable content that can be directly added to this note. Format your response as a clean list or paragraph that the user can immediately insert into their note. Focus on providing the actual content, not meta-commentary about what could be added.`
-        systemPrompt = 'You are a helpful AI assistant that provides actionable content suggestions. When users ask for ideas or suggestions, provide specific, well-formatted content that can be directly added to their note. Be concrete and specific, not vague or meta.'
-      } else {
-        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide a helpful response to the user's request about this note. Be concise and actionable.`
-        systemPrompt = 'You are a helpful AI assistant that helps users work with their notes. Be concise and focus on what the user asked for.'
-      }
+      // Use AI to determine intent
+      const prompt = `${context}
+
+User request: ${userMessage.content}
+
+---
+TASK: Analyze the user's request and respond with:
+1. First line MUST be exactly one of: INTENT:REPLACE or INTENT:ADD or INTENT:INFO
+   - REPLACE: User wants to modify/rewrite/change existing content
+   - ADD: User wants to add new information/facts/content
+   - INFO: User is asking a question or needs explanation (no content changes)
+2. Following lines: Provide the content to fulfill the request
+
+IMPORTANT:
+- For REPLACE: Provide ONLY the modified version of the entire note content
+- For ADD: Provide ONLY new content to be added (formatted and ready to insert)
+- For INFO: Provide a helpful conversational response
+
+Begin your response now:`
+
+      const systemPrompt = 'You are a helpful AI assistant that helps users work with their notes. Always start your response with INTENT:REPLACE, INTENT:ADD, or INTENT:INFO on the first line, then provide the requested content.'
 
       const response = await generateText(prompt, systemPrompt)
 
+      // Parse the response
+      const lines = response.trim().split('\n')
+      let intent: 'REPLACE' | 'ADD' | 'INFO' = 'INFO'
+      let content = response.trim()
+
+      // Check if first line contains intent marker
+      if (lines[0] && lines[0].startsWith('INTENT:')) {
+        const intentLine = lines[0].replace('INTENT:', '').trim()
+        if (intentLine === 'REPLACE' || intentLine === 'ADD' || intentLine === 'INFO') {
+          intent = intentLine
+          content = lines.slice(1).join('\n').trim()
+        }
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.trim(),
+        content: content,
         timestamp: new Date(),
-        isActionable: isModificationRequest || isSuggestionRequest,
+        isActionable: intent === 'REPLACE' || intent === 'ADD',
+        intent: intent,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -186,7 +196,7 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 flex items-center justify-center flex-shrink-0">
           <Sparkles className="w-4 h-4 text-gray-900" />
         </div>
-        <div>
+        <div className="flex-1">
           <h3 className="font-display font-semibold text-sm text-gray-900 dark:text-gray-100">
             AI Co-Pilot
           </h3>
@@ -194,6 +204,17 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
             Ask me to modify or improve your note
           </p>
         </div>
+        {/* Undo Button */}
+        {canUndo && onUndo && (
+          <button
+            onClick={onUndo}
+            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1.5"
+            title="Undo last change"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            <span>Undo</span>
+          </button>
+        )}
       </div>
 
       {/* Messages */}
@@ -231,12 +252,17 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
               {/* Action Buttons for Actionable AI Messages */}
               {message.role === 'assistant' && message.isActionable && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                  <button
-                    onClick={() => onReplaceContent(message.content)}
-                    className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
-                  >
-                    Replace Content
-                  </button>
+                  {/* Replace Content - Only for REPLACE intent */}
+                  {message.intent === 'REPLACE' && (
+                    <button
+                      onClick={() => onReplaceContent(message.content)}
+                      className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
+                    >
+                      Replace Content
+                    </button>
+                  )}
+                  
+                  {/* Copy - Always available for actionable messages */}
                   <button
                     onClick={() => handleCopy(message.content, index)}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1"
@@ -254,6 +280,8 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
                       </>
                     )}
                   </button>
+                  
+                  {/* Insert Below - Always available for actionable messages */}
                   <button
                     onClick={() => onInsertContent(message.content)}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
