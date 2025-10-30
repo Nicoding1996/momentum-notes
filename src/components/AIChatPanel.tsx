@@ -17,25 +17,71 @@ interface Message {
 }
 
 export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatPanelProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: 'What would you like to do with this note?',
-      timestamp: new Date(),
-      isActionable: false,
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [quickSuggestions, setQuickSuggestions] = useState<string[]>([])
   const { generateText, status } = useChromeAI()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [hasAnalyzed, setHasAnalyzed] = useState(false)
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Proactive content analysis when chat opens
+  useEffect(() => {
+    if (!hasAnalyzed && status.available && note.content.trim()) {
+      analyzeNoteContent()
+      setHasAnalyzed(true)
+    }
+  }, [status.available, note.content, hasAnalyzed])
+
+  const analyzeNoteContent = async () => {
+    const wordCount = note.content.split(/\s+/).filter(w => w.length > 0).length
+    const hasListItems = note.content.includes('*') || note.content.includes('-') || /^\d+\./.test(note.content)
+    
+    // Generate smart suggestions based on content analysis
+    const suggestions: string[] = []
+    
+    if (wordCount < 50) {
+      suggestions.push('Expand on this topic')
+    }
+    if (wordCount > 200) {
+      suggestions.push('Summarize this note')
+    }
+    if (!hasListItems && wordCount > 100) {
+      suggestions.push('Convert to bullet points')
+    }
+    
+    // Always offer these common actions
+    suggestions.push('What else can I add?', 'Make this more professional')
+    
+    setQuickSuggestions(suggestions.slice(0, 4))
+
+    // Send initial greeting with context
+    const greeting: Message = {
+      role: 'assistant',
+      content: `I'm analyzing your note about "${note.title}". ${
+        wordCount < 30
+          ? "It's quite brief - would you like to expand it?"
+          : wordCount > 300
+          ? "You have a detailed note here. I can help summarize or reorganize it."
+          : "How can I help improve this note?"
+      }`,
+      timestamp: new Date(),
+      isActionable: false,
+    }
+    setMessages([greeting])
+  }
+
+  const handleQuickSuggestion = (suggestion: string) => {
+    setInput(suggestion)
+    inputRef.current?.focus()
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,28 +103,41 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
       const context = `Note Title: "${note.title}"\n\nNote Content:\n${note.content}`
       
       const modificationKeywords = [
-        'rewrite', 'make', 'change', 'improve', 'expand', 'shorten', 
+        'rewrite', 'make', 'change', 'improve', 'expand', 'shorten',
         'professional', 'casual', 'formal', 'simplify', 'enhance',
         'refine', 'polish', 'rephrase', 'restructure'
       ]
-      const isModificationRequest = modificationKeywords.some(keyword => userCommand.includes(keyword))
       
-      const prompt = isModificationRequest
-        ? `${context}\n\nUser request: ${userMessage.content}\n\nProvide ONLY the modified version of the note content. Do not include any explanations, just the rewritten text.`
-        : `${context}\n\nUser request: ${userMessage.content}\n\nProvide a helpful response to the user's request about this note. Be concise and actionable.`
+      const suggestionKeywords = [
+        'what else', 'suggest', 'add', 'more', 'other', 'additional',
+        'ideas', 'facts', 'examples', 'details', 'points', 'topics',
+        'include', 'could i', 'should i', 'can i add'
+      ]
+      
+      const isModificationRequest = modificationKeywords.some(keyword => userCommand.includes(keyword))
+      const isSuggestionRequest = suggestionKeywords.some(keyword => userCommand.includes(keyword))
+      
+      let prompt: string
+      let systemPrompt: string
+      
+      if (isModificationRequest) {
+        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide ONLY the modified version of the note content. Do not include any explanations, just the rewritten text.`
+        systemPrompt = 'You are a helpful AI assistant that rewrites and modifies text. When asked to modify text, provide ONLY the modified version without any explanations or preamble.'
+      } else if (isSuggestionRequest) {
+        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide specific, actionable content that can be directly added to this note. Format your response as a clean list or paragraph that the user can immediately insert into their note. Focus on providing the actual content, not meta-commentary about what could be added.`
+        systemPrompt = 'You are a helpful AI assistant that provides actionable content suggestions. When users ask for ideas or suggestions, provide specific, well-formatted content that can be directly added to their note. Be concrete and specific, not vague or meta.'
+      } else {
+        prompt = `${context}\n\nUser request: ${userMessage.content}\n\nProvide a helpful response to the user's request about this note. Be concise and actionable.`
+        systemPrompt = 'You are a helpful AI assistant that helps users work with their notes. Be concise and focus on what the user asked for.'
+      }
 
-      const response = await generateText(
-        prompt,
-        isModificationRequest 
-          ? 'You are a helpful AI assistant that rewrites and modifies text. When asked to modify text, provide ONLY the modified version without any explanations or preamble.'
-          : 'You are a helpful AI assistant that helps users work with their notes. Be concise and focus on what the user asked for.'
-      )
+      const response = await generateText(prompt, systemPrompt)
 
       const assistantMessage: Message = {
         role: 'assistant',
         content: response.trim(),
         timestamp: new Date(),
-        isActionable: isModificationRequest,
+        isActionable: isModificationRequest || isSuggestionRequest,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
@@ -216,6 +275,25 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent }: AIChatP
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Quick Suggestions */}
+      {quickSuggestions.length > 0 && (
+        <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick actions:</p>
+          <div className="flex flex-wrap gap-2">
+            {quickSuggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickSuggestion(suggestion)}
+                disabled={isProcessing}
+                className="px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Input */}
       <form
