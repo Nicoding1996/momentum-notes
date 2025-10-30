@@ -18,6 +18,7 @@ function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('canvas')
   const [showSearch, setShowSearch] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [viewportCenter, setViewportCenter] = useState<{ x: number; y: number } | null>(null)
 
   // Seed demo note on first load (dev)
   useEffect(() => {
@@ -58,15 +59,23 @@ function App() {
   const handleNewNote = async () => {
     const id = nanoid()
     const now = new Date().toISOString()
+    
+    // Calculate position - use viewport center if available, otherwise use default grid position
+    const noteCount = notes?.length || 0
+    const defaultX = (noteCount % 4) * 350 + 50
+    const defaultY = Math.floor(noteCount / 4) * 250 + 50
+    
     const newNote: Note = {
       id,
       title: 'Untitled Note',
       content: '',
       createdAt: now,
       updatedAt: now,
+      // Place new note at the center of the current viewport if available
+      x: viewportCenter ? Math.round(viewportCenter.x - 140) : defaultX,
+      y: viewportCenter ? Math.round(viewportCenter.y - 120) : defaultY,
     }
     await db.notes.add(newNote)
-    setEditingNote(newNote)
   }
 
   const deleteNote = async (id: string) => {
@@ -243,6 +252,7 @@ function App() {
                   notes={notes}
                   onEditNote={openEditor}
                   onDeleteNote={deleteNote}
+                  onViewportCenterChange={setViewportCenter}
                 />
               </div>
             ) : (

@@ -34,6 +34,7 @@ interface CanvasViewProps {
   notes: Note[]
   onEditNote: (note: Note) => void
   onDeleteNote: (id: string) => void
+  onViewportCenterChange?: (center: { x: number; y: number }) => void
 }
 
 // Helper function to strip HTML tags for preview
@@ -269,7 +270,7 @@ const nodeTypes: NodeTypes = {
   noteNode: NoteNode,
 }
 
-function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
+function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChange }: CanvasViewProps) {
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
@@ -285,14 +286,22 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   const touchStartRef = useRef<{ dist: number; x: number; y: number } | null>(null)
   const rafPendingRef = useRef(false)
   
-  // Track zoom changes
+  // Track zoom changes and report viewport center
   useEffect(() => {
     const interval = setInterval(() => {
       const viewport = getViewport()
       setCurrentZoom(Math.round(viewport.zoom * 100))
+      
+      // Calculate and report viewport center for new note placement
+      if (onViewportCenterChange && reactFlowWrapper.current) {
+        const rect = reactFlowWrapper.current.getBoundingClientRect()
+        const centerX = (-viewport.x + rect.width / 2) / viewport.zoom
+        const centerY = (-viewport.y + rect.height / 2) / viewport.zoom
+        onViewportCenterChange({ x: centerX, y: centerY })
+      }
     }, 100)
     return () => clearInterval(interval)
-  }, [getViewport])
+  }, [getViewport, onViewportCenterChange])
 
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
@@ -314,31 +323,33 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
     }
   }, [notes])
 
-  // Convert notes to React Flow nodes
+  // Convert notes to React Flow nodes with proper validation
   const initialNodes: Node[] = useMemo(
     () =>
-      notes.map((note, index) => ({
-        id: note.id,
-        type: 'noteNode',
-        position: {
-          x: note.x ?? (index % 4) * 350 + 50,
-          y: note.y ?? Math.floor(index / 4) * 250 + 50,
-        },
-        style: {
-          width: note.width ?? 280,
-          height: note.height ?? 240,
-        },
-        resizing: false,
-        data: {
-          title: note.title,
-          content: note.content,
-          tags: note.tags,
-          updatedAt: note.updatedAt,
-          onEdit: () => onEditNote(note),
-          onDelete: () => onDeleteNote(note.id),
-          onUpdate: (updates: { title?: string; content?: string }) => handleNoteUpdate(note.id, updates),
-        },
-      })),
+      notes.map((note, index) => {
+        // Ensure position values are valid numbers
+        const x = typeof note.x === 'number' && !isNaN(note.x) ? note.x : (index % 4) * 350 + 50
+        const y = typeof note.y === 'number' && !isNaN(note.y) ? note.y : Math.floor(index / 4) * 250 + 50
+        const width = typeof note.width === 'number' && !isNaN(note.width) ? note.width : 280
+        const height = typeof note.height === 'number' && !isNaN(note.height) ? note.height : 240
+        
+        return {
+          id: note.id,
+          type: 'noteNode',
+          position: { x, y },
+          style: { width, height },
+          draggable: true,
+          data: {
+            title: note.title,
+            content: note.content,
+            tags: note.tags,
+            updatedAt: note.updatedAt,
+            onEdit: () => onEditNote(note),
+            onDelete: () => onDeleteNote(note.id),
+            onUpdate: (updates: { title?: string; content?: string }) => handleNoteUpdate(note.id, updates),
+          },
+        }
+      }),
     [notes, onEditNote, onDeleteNote, handleNoteUpdate]
   )
 
@@ -374,10 +385,24 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote }: CanvasViewProps) {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges)
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
 
-  // Update nodes when data changes
+  // Update nodes only when notes are added or removed, not when content changes
+  const prevNoteCountRef = useRef(0)
+  const prevNoteIdsRef = useRef(new Set<string>())
+  
   useEffect(() => {
-    setNodes(initialNodes)
-  }, [initialNodes, setNodes])
+    const currentIds = new Set(notes.map(n => n.id))
+    const prevIds = prevNoteIdsRef.current
+    
+    // Check if any notes were added or removed
+    const hasNewNotes = notes.some(n => !prevIds.has(n.id))
+    const hasRemovedNotes = Array.from(prevIds).some(id => !currentIds.has(id))
+    
+    if (hasNewNotes || hasRemovedNotes || prevNoteCountRef.current === 0) {
+      setNodes(initialNodes)
+      prevNoteCountRef.current = notes.length
+      prevNoteIdsRef.current = currentIds
+    }
+  }, [notes, initialNodes, setNodes])
 
   // Update edges when database changes
   useEffect(() => {
