@@ -59,24 +59,37 @@
     @apply bg-gray-400 dark:bg-gray-600;
   }
 
-  /* Modern card styles */
+  /* Modern card styles - Hardware Accelerated */
   .card {
     @apply bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-800/60;
     @apply backdrop-blur-xl;
+    contain: layout style paint;
   }
 
   .card-hover {
-    @apply card transition-all duration-300;
+    @apply card;
+    will-change: transform, box-shadow;
+    @apply transition-transform duration-200 ease-out;
     @apply hover:shadow-lg hover:border-gray-300/60 dark:hover:border-gray-700/60;
-    @apply hover:-translate-y-0.5;
+    transform: translate3d(0, 0, 0);
+  }
+  
+  .card-hover:hover {
+    transform: translate3d(0, -2px, 0);
   }
 
-  /* Note block - refined & elegant */
+  /* Note block - refined & elegant with hardware acceleration */
   .note-block {
     @apply bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200/60 dark:border-gray-800/60;
-    @apply transition-all duration-300 ease-out;
+    will-change: transform, box-shadow;
+    transform: translate3d(0, 0, 0);
+    @apply transition-transform duration-200 ease-out;
     @apply hover:shadow-md hover:border-primary-200 dark:hover:border-primary-800/50;
-    @apply hover:-translate-y-1;
+    contain: layout style paint;
+  }
+  
+  .note-block:hover {
+    transform: translate3d(0, -4px, 0);
   }
 
   /* Glass morphism effects */
@@ -97,10 +110,12 @@
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
   }
 
-  /* Modern button styles */
+  /* Modern button styles - Hardware Accelerated */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium;
-    @apply transition-all duration-200 ease-out;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    @apply transition-transform duration-150 ease-out;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
     @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
   }
@@ -315,13 +330,29 @@
   }
 }
 
-/* React Flow customizations */
+/* React Flow customizations - Hardware Accelerated */
 .react-flow__node {
-  @apply transition-all duration-200;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  @apply transition-transform duration-150 ease-out;
+  contain: layout style paint;
+}
+
+.react-flow__node.dragging {
+  will-change: transform;
+  @apply transition-none;
 }
 
 .react-flow__edge-path {
-  @apply transition-all duration-200;
+  @apply transition-all duration-150;
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing;
 }
 
 .react-flow__controls {

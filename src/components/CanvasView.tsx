@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react'
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   Node,
@@ -33,10 +33,13 @@ interface CanvasViewProps {
   onDeleteNote: (id: string) => void
 }
 
-// Custom Note Node Component
+// Custom Note Node Component with hardware acceleration
 function NoteNode({ data }: { data: any }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200/80 dark:border-gray-700/80 rounded-2xl shadow-lg hover:shadow-xl p-5 min-w-[220px] max-w-[320px] relative group transition-all duration-200 hover:-translate-y-1">
+    <div
+      className="bg-white dark:bg-gray-900 border-2 border-gray-200/80 dark:border-gray-700/80 rounded-2xl shadow-lg hover:shadow-xl p-5 min-w-[220px] max-w-[320px] relative group transition-all duration-200 hover:-translate-y-1"
+      style={{ willChange: 'transform', transform: 'translate3d(0, 0, 0)' }}
+    >
       {/* Connection handles */}
       <Handle
         type="source"
@@ -115,6 +118,10 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
   const [selectedRelationshipFilter, setSelectedRelationshipFilter] = useState<string>('all')
   const [showFilterDropdown, setShowFilterDropdown] = useState(false)
+  
+  // Debounced save for performance - save positions after user stops dragging
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const pendingSavesRef = useRef<Map<string, { x: number; y: number }>>(new Map())
 
   // Fetch edges from database
   const noteEdges: NoteEdge[] = useLiveQuery(() => db.edges.toArray(), []) ?? []
@@ -198,20 +205,53 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     setSelectedEdge(null)
   }, [])
 
-  // Save node position
-  const handleNodeDragStop: NodeMouseHandler = useCallback(
-    async (_event, node) => {
+  // Debounced save function - batch database writes for better performance
+  const debouncedSavePositions = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+    
+    saveTimeoutRef.current = setTimeout(async () => {
+      const saves = Array.from(pendingSavesRef.current.entries())
+      if (saves.length === 0) return
+      
       try {
-        await db.notes.update(node.id, {
-          x: node.position.x,
-          y: node.position.y,
-        })
+        // Batch update all positions at once
+        await Promise.all(
+          saves.map(([id, position]) =>
+            db.notes.update(id, { x: position.x, y: position.y })
+          )
+        )
+        pendingSavesRef.current.clear()
       } catch (error) {
-        console.error('Failed to save note position:', error)
+        console.error('Failed to save note positions:', error)
       }
+    }, 500) // Save 500ms after user stops dragging
+  }, [])
+
+  // Optimistic UI update - update immediately, save later
+  const handleNodeDragStop: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      // Store position for batch save
+      pendingSavesRef.current.set(node.id, {
+        x: node.position.x,
+        y: node.position.y,
+      })
+      
+      // Trigger debounced save
+      debouncedSavePositions()
     },
-    []
+    [debouncedSavePositions]
   )
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+      }
+    }
+  }, [])
 
   // Handle new connection
   const handleConnect = useCallback(
@@ -518,6 +558,12 @@ Return ONLY the JSON array, no other text:`
           deleteKeyCode="Delete"
           selectNodesOnDrag={false}
           connectionMode={ConnectionMode.Loose}
+          panOnScroll={true}
+          panOnScrollSpeed={0.5}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          zoomOnDoubleClick={false}
+          preventScrolling={true}
           defaultEdgeOptions={{
             animated: false,
             type: 'smoothstep',
