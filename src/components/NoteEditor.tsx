@@ -473,7 +473,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           )}
 
           {/* Editor Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-3">
+          <div className={`flex-1 overflow-y-auto px-6 py-3 ${isFocusMode ? 'pt-12' : ''}`}>
             {mode === 'write' ? (
               <textarea
                 ref={textareaRef}
@@ -572,11 +572,23 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
         </div>
 
-        {/* Focus Mode Exit Hint */}
+        {/* Focus Mode UI */}
         {isFocusMode && (
-          <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
-            Press ESC to exit Focus Mode
-          </div>
+          <>
+            <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
+              Press ESC to exit Focus Mode
+            </div>
+            {contentHistory.length > 0 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+                <button
+                  onClick={handleUndo}
+                  className="btn bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 hover:bg-gray-900 dark:hover:bg-white text-sm"
+                >
+                  Undo
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Context Menu for Selected Text */}
