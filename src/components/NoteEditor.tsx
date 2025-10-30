@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, Mic, MicOff, Eye, Edit3, Maximize2 } from 'lucide-react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import UnderlineExtension from '@tiptap/extension-underline'
+import ImageExtension from '@tiptap/extension-image'
+import { X, Save, Sparkles, Mic, MicOff, Maximize2, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Image } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -23,7 +26,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
-  const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [contentHistory, setContentHistory] = useState<string[]>([])
@@ -35,12 +37,36 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
 
-  // Text selection and context menu
+  // Tiptap Editor
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      UnderlineExtension,
+      ImageExtension,
+    ],
+    content: content,
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML()
+      setContent(html)
+    },
+    editorProps: {
+      attributes: {
+        class: 'editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 text-base leading-relaxed text-gray-900 dark:text-gray-100 prose prose-sm sm:prose lg:prose-lg xl:prose-xl focus:outline-none max-w-none',
+      },
+    },
+  })
+
+  // Update editor content when note changes
+  useEffect(() => {
+    if (editor && editor.getHTML() !== content) {
+      editor.commands.setContent(content)
+    }
+  }, [note.id])
+
+  // Text selection (for AI context menu - still used)
   const {
     selectedText,
-    isTextSelected,
     contextMenuState,
-    handleContextMenu,
     closeContextMenu,
     replaceSelection
   } = useTextSelection({
@@ -174,16 +200,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     textareaRef.current?.focus()
   }, [])
 
-  // Auto-resize textarea to fit content
-  useEffect(() => {
-    const textarea = textareaRef.current
-    if (textarea && mode === 'write') {
-      // Reset height to auto to get the correct scrollHeight
-      textarea.style.height = 'auto'
-      // Set height to scrollHeight to fit all content
-      textarea.style.height = `${textarea.scrollHeight}px`
-    }
-  }, [content, mode])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -288,6 +304,21 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       alert(error instanceof Error ? error.message : 'Failed to improve text')
     } finally {
       setAiLoading(false)
+    }
+  }
+
+  // Formatting functions for Tiptap
+  const handleBold = () => editor?.chain().focus().toggleBold().run()
+  const handleItalic = () => editor?.chain().focus().toggleItalic().run()
+  const handleUnderline = () => editor?.chain().focus().toggleUnderline().run()
+  const handleStrikethrough = () => editor?.chain().focus().toggleStrike().run()
+  const handleBulletList = () => editor?.chain().focus().toggleBulletList().run()
+  const handleNumberedList = () => editor?.chain().focus().toggleOrderedList().run()
+  
+  const handleInsertImage = () => {
+    const url = prompt('Enter image URL:')
+    if (url && editor) {
+      editor.chain().focus().setImage({ src: url }).run()
     }
   }
 
@@ -491,41 +522,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
           )}
 
-          {/* Editor Mode Toggle & Focus Mode Button */}
+          {/* Focus Mode Toggle */}
           {!isFocusMode && (
-          <div className="flex items-center justify-between px-6 py-3">
-            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden p-0.5 bg-gray-100/50 dark:bg-gray-800/50">
-              <button
-                onClick={() => setMode('write')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
-                  mode === 'write'
-                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-                aria-pressed={mode === 'write'}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Write
-                </div>
-              </button>
-              <button
-                onClick={() => setMode('preview')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
-                  mode === 'preview'
-                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-                aria-pressed={mode === 'preview'}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview
-                </div>
-              </button>
-            </div>
-            
-            {/* Focus Mode Toggle */}
+          <div className="flex items-center justify-end px-6 py-3">
             <button
               onClick={() => setIsFocusMode(true)}
               className="btn btn-ghost text-xs px-3 py-1.5"
@@ -537,63 +536,149 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
           )}
 
-          {/* Editor Content */}
-          <div className={`flex-1 overflow-y-auto px-6 py-3 ${isFocusMode ? 'pt-12' : ''}`}>
-            {mode === 'write' ? (
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={(e) => {
-                  setContent(e.target.value)
-                  // Reset interim tracking when user manually types
-                  if (interimStartPosRef.current !== null) {
-                    interimStartPosRef.current = null
-                    contentBeforeInterimRef.current = ''
-                  }
-                  // Only update cursor position when not recording
-                  if (!voiceStatus.isRecording) {
-                    cursorPositionRef.current = e.target.selectionStart
-                  }
-                }}
-                onClick={(e) => {
-                  // Only update cursor position when not recording
-                  if (!voiceStatus.isRecording) {
-                    cursorPositionRef.current = e.currentTarget.selectionStart
-                  }
-                }}
-                onKeyUp={(e) => {
-                  // Only update cursor position when not recording
-                  if (!voiceStatus.isRecording) {
-                    cursorPositionRef.current = e.currentTarget.selectionStart
-                  }
-                }}
-                onContextMenu={handleContextMenu}
-                placeholder="Start writing your note..."
-                className={`editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 ${isTextSelected ? 'has-selection' : ''}`}
-              />
-            ) : (
-              <div className="min-h-[500px]">
-                <div className="prose-custom">
-                  <ReactMarkdown
-                    components={{
-                      strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>,
-                      em: ({ children }) => <em className="italic">{children}</em>,
-                      h1: ({ children }) => <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-2xl font-bold mt-5 mb-3">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-xl font-bold mt-4 mb-2">{children}</h3>,
-                      ul: ({ children }) => <ul className="list-disc list-inside my-3 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal list-inside my-3 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li className="my-1 text-gray-700 dark:text-gray-300">{children}</li>,
-                      p: ({ children }) => <p className="my-3 text-gray-700 dark:text-gray-300 leading-relaxed">{children}</p>,
-                      code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg text-sm font-mono text-primary-600 dark:text-primary-400">{children}</code>,
-                      a: ({ children, href }) => <a href={href} className="text-primary-600 dark:text-primary-400 hover:underline font-medium" target="_blank" rel="noopener noreferrer">{children}</a>,
-                    }}
-                  >
-                    {content || '_Nothing to preview yet_'}
-                  </ReactMarkdown>
-                </div>
+          {/* Formatting Toolbar - Always visible */}
+          {!isFocusMode && (
+            <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-2 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleBold}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Bold (Ctrl+B)"
+                  aria-label="Bold"
+                >
+                  <Bold className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleItalic}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Italic (Ctrl+I)"
+                  aria-label="Italic"
+                >
+                  <Italic className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleUnderline}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Underline (Ctrl+U)"
+                  aria-label="Underline"
+                >
+                  <Underline className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleStrikethrough}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Strikethrough"
+                  aria-label="Strikethrough"
+                >
+                  <Strikethrough className="w-4 h-4" />
+                </button>
+                
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                
+                <button
+                  onClick={handleBulletList}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Bullet List"
+                  aria-label="Bullet List"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleNumberedList}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Numbered List"
+                  aria-label="Numbered List"
+                >
+                  <ListOrdered className="w-4 h-4" />
+                </button>
+                
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                
+                <button
+                  onClick={handleInsertImage}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Insert Image"
+                  aria-label="Insert Image"
+                >
+                  <Image className="w-4 h-4" />
+                </button>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Formatting Toolbar in Focus Mode */}
+          {isFocusMode && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-xl border border-gray-200/60 dark:border-gray-800/60 shadow-lg z-10 bg-white dark:bg-gray-900 px-4 py-2">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleBold}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Bold"
+                  aria-label="Bold"
+                >
+                  <Bold className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleItalic}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Italic"
+                  aria-label="Italic"
+                >
+                  <Italic className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleUnderline}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Underline"
+                  aria-label="Underline"
+                >
+                  <Underline className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleStrikethrough}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Strikethrough"
+                  aria-label="Strikethrough"
+                >
+                  <Strikethrough className="w-4 h-4" />
+                </button>
+                
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                
+                <button
+                  onClick={handleBulletList}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Bullet List"
+                  aria-label="Bullet List"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleNumberedList}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Numbered List"
+                  aria-label="Numbered List"
+                >
+                  <ListOrdered className="w-4 h-4" />
+                </button>
+                
+                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                
+                <button
+                  onClick={handleInsertImage}
+                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  title="Insert Image"
+                  aria-label="Insert Image"
+                >
+                  <Image className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* WYSIWYG Editor Content */}
+          <div className={`flex-1 overflow-y-auto px-6 py-3 ${isFocusMode ? 'pt-20' : ''}`}>
+            <EditorContent editor={editor} className="min-h-[500px]" />
           </div>
 
           {/* Footer */}

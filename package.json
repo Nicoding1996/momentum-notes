@@ -16,6 +16,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.56.2",
+    "@tiptap/extension-image": "^3.10.0",
+    "@tiptap/extension-underline": "^3.10.0",
+    "@tiptap/react": "^3.10.0",
+    "@tiptap/starter-kit": "^3.10.0",
     "@xyflow/react": "^12.3.2",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -28,6 +32,7 @@
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.26.2",
+    "remark-gfm": "^4.0.1",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
