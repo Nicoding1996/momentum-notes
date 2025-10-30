@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3, ChevronDown, Maximize2 } from 'lucide-react'
+import { X, Save, Sparkles, Mic, MicOff, Eye, Edit3, Maximize2 } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
+import { useTextSelection } from '@/hooks/useTextSelection'
 import { TagInput } from '@/components/ui/TagInput'
 import { AIChatPanel } from '@/components/AIChatPanel'
+import { TextContextMenu } from '@/components/ui/TextContextMenu'
 
 interface NoteEditorProps {
   note: Note
@@ -21,18 +23,27 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
-  const [selectedText, setSelectedText] = useState('')
   const [mode, setMode] = useState<'write' | 'preview'>('write')
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
-  const [showAIToolsDropdown, setShowAIToolsDropdown] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [contentHistory, setContentHistory] = useState<string[]>([])
   const interimStartPosRef = useRef<number | null>(null)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
+
+  // Text selection and context menu
+  const {
+    selectedText,
+    isTextSelected,
+    contextMenuState,
+    handleContextMenu,
+    closeContextMenu,
+    replaceSelection
+  } = useTextSelection({
+    elementRef: textareaRef
+  })
 
   // Voice transcription
   const handleTranscript = (text: string, isFinal: boolean) => {
@@ -129,20 +140,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [title, content, hasUnsavedChanges, isFocusMode])
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAIToolsDropdown(false)
-      }
-    }
-
-    if (showAIToolsDropdown) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showAIToolsDropdown])
-
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
 
@@ -180,31 +177,15 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     onClose()
   }
 
-  const handleTextSelect = () => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      const selected = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd)
-      setSelectedText(selected)
-    }
-  }
-
-  // AI Actions
+  // AI Actions for context menu - all require selected text
   const handleAIExpand = async () => {
-    if (!selectedText.trim()) {
-      alert('Please select some text to expand')
-      return
-    }
+    if (!selectedText.trim()) return
     
     setAiLoading(true)
     try {
       const expanded = await expandText(selectedText, `This is part of a note titled: ${title}`)
-      const textarea = textareaRef.current
-      if (textarea) {
-        const start = textarea.selectionStart
-        const end = textarea.selectionEnd
-        const newContent = content.substring(0, start) + expanded + content.substring(end)
-        setContent(newContent)
-      }
+      replaceSelection(expanded, setContent)
+      closeContextMenu()
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to expand text')
     } finally {
@@ -213,26 +194,13 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   }
 
   const handleAISummarize = async () => {
-    const textToSummarize = selectedText.trim() || content.trim()
-    if (!textToSummarize) {
-      alert('No text to summarize')
-      return
-    }
+    if (!selectedText.trim()) return
     
     setAiLoading(true)
     try {
-      const summary = await summarizeText(textToSummarize, 'tl;dr')
-      if (selectedText.trim()) {
-        const textarea = textareaRef.current
-        if (textarea) {
-          const start = textarea.selectionStart
-          const end = textarea.selectionEnd
-          const newContent = content.substring(0, start) + summary + content.substring(end)
-          setContent(newContent)
-        }
-      } else {
-        setContent(`📝 Summary: ${summary}\n\n---\n\n${content}`)
-      }
+      const summary = await summarizeText(selectedText, 'tl;dr')
+      replaceSelection(summary, setContent)
+      closeContextMenu()
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to summarize')
     } finally {
@@ -241,21 +209,13 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   }
 
   const handleAIImprove = async () => {
-    if (!selectedText.trim()) {
-      alert('Please select some text to improve')
-      return
-    }
+    if (!selectedText.trim()) return
     
     setAiLoading(true)
     try {
       const improved = await improveWriting(selectedText, 'more-formal')
-      const textarea = textareaRef.current
-      if (textarea) {
-        const start = textarea.selectionStart
-        const end = textarea.selectionEnd
-        const newContent = content.substring(0, start) + improved + content.substring(end)
-        setContent(newContent)
-      }
+      replaceSelection(improved, setContent)
+      closeContextMenu()
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to improve text')
     } finally {
@@ -377,68 +337,11 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   AI Chat
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 </button>
-                
-                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
-                
-                {/* AI Tools Dropdown */}
-                <div className="relative" ref={dropdownRef}>
-                  <button
-                    onClick={() => setShowAIToolsDropdown(!showAIToolsDropdown)}
-                    className="btn btn-secondary text-sm"
-                    title="Quick AI Actions"
-                  >
-                    <Wand2 className="w-4 h-4" />
-                    AI Tools
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showAIToolsDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-                  
-                  {/* Dropdown Menu */}
-                  {showAIToolsDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg z-50 overflow-hidden animate-in">
-                      <button
-                        onClick={() => {
-                          handleAIExpand()
-                          setShowAIToolsDropdown(false)
-                        }}
-                        disabled={aiLoading || !selectedText}
-                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Expand</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Expand selected text</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleAISummarize()
-                          setShowAIToolsDropdown(false)
-                        }}
-                        disabled={aiLoading}
-                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-gray-100 dark:border-gray-700"
-                      >
-                        <FileText className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Summarize</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Create a summary</div>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleAIImprove()
-                          setShowAIToolsDropdown(false)
-                        }}
-                        disabled={aiLoading || !selectedText}
-                        className="w-full px-4 py-3 text-left flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-t border-gray-100 dark:border-gray-700"
-                      >
-                        <Wand2 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Improve</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">Enhance selected text</div>
-                        </div>
-                      </button>
-                    </div>
-                  )}
+
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    Right-click selected text for AI tools
+                  </p>
                 </div>
                 
                 {/* Voice Button */}
@@ -578,9 +481,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                     interimStartPosRef.current = null
                   }
                 }}
-                onSelect={handleTextSelect}
+                onContextMenu={handleContextMenu}
                 placeholder="Start writing your note..."
-                className="w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100"
+                className={`editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 ${isTextSelected ? 'has-selection' : ''}`}
               />
             ) : (
               <div className="min-h-[500px]">
@@ -664,6 +567,19 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             Press ESC to exit Focus Mode
           </div>
         )}
+
+        {/* Context Menu for Selected Text */}
+        <TextContextMenu
+          x={contextMenuState.x}
+          y={contextMenuState.y}
+          isOpen={contextMenuState.isOpen}
+          onClose={closeContextMenu}
+          selectedText={selectedText}
+          onExpand={handleAIExpand}
+          onSummarize={handleAISummarize}
+          onImprove={handleAIImprove}
+          isLoading={aiLoading}
+        />
       </div>
     </div>
   )

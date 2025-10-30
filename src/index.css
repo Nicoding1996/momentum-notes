@@ -461,3 +461,107 @@
   @apply shadow-lg;
   animation: fadeIn 0.2s ease-out;
 }
+
+/* Custom Context Menu Styles */
+.context-menu-container {
+  @apply backdrop-blur-xl;
+  @apply border border-gray-200/60 dark:border-gray-800/60;
+  @apply rounded-xl shadow-xl;
+  background-color: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    0 -1px 2px 0 rgba(255, 255, 255, 0.2) inset,
+    0 12px 32px -8px rgba(0, 0, 0, 0.15),
+    0 8px 16px -4px rgba(0, 0, 0, 0.08);
+  min-width: 220px;
+  padding: 6px;
+  animation: contextMenuIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top left;
+  will-change: transform, opacity;
+  contain: layout style paint;
+}
+
+.dark .context-menu-container {
+  background-color: rgba(23, 23, 23, 0.98);
+}
+
+.context-menu-header {
+  @apply flex items-center gap-2 px-3 py-2;
+  @apply text-sm text-gray-700 dark:text-gray-300;
+  @apply mb-1;
+  border-bottom: 1px solid rgba(229, 229, 229, 0.6);
+}
+
+.dark .context-menu-header {
+  border-bottom-color: rgba(38, 38, 38, 0.6);
+}
+
+.context-menu-items {
+  @apply flex flex-col gap-0.5;
+}
+
+.context-menu-item {
+  @apply flex items-center gap-3 px-3 py-2.5;
+  @apply rounded-lg cursor-pointer;
+  @apply transition-all duration-150 ease-out;
+  @apply bg-transparent;
+  @apply active:scale-[0.98];
+  @apply disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent;
+  @apply focus-visible:outline-none focus-visible:ring-2;
+  will-change: transform, background-color;
+}
+
+.context-menu-item:hover:not(:disabled) {
+  background-color: rgba(255, 250, 240, 0.8);
+}
+
+.dark .context-menu-item:hover:not(:disabled) {
+  background-color: rgba(122, 100, 0, 0.2);
+}
+
+.context-menu-item:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
+}
+
+.context-menu-item:disabled {
+  pointer-events: none;
+}
+
+.context-menu-icon {
+  @apply flex-shrink-0;
+  @apply transition-colors duration-150;
+}
+
+.context-menu-footer {
+  @apply flex items-center justify-center px-3 py-2;
+  @apply mt-1;
+  border-top: 1px solid rgba(229, 229, 229, 0.6);
+}
+
+.dark .context-menu-footer {
+  border-top-color: rgba(38, 38, 38, 0.6);
+}
+
+/* Context Menu Animation */
+@keyframes contextMenuIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Custom cursor for selected text */
+.editor-textarea::selection {
+  background-color: rgba(255, 245, 173, 0.4);
+}
+
+.dark .editor-textarea::selection {
+  background-color: rgba(158, 131, 0, 0.4);
+}
+
+.editor-textarea.has-selection {
+  cursor: context-menu;
+}
