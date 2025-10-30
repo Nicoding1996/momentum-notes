@@ -284,7 +284,6 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   
   // Custom zoom handling for enhanced responsiveness
   const touchStartRef = useRef<{ dist: number; x: number; y: number } | null>(null)
-  const rafPendingRef = useRef(false)
   
   // Track zoom changes and report viewport center
   useEffect(() => {
@@ -684,13 +683,43 @@ Return ONLY the JSON array, no other text:`
     }
   }, [notes, isAutoLinking, generateText])
 
-  // Enhanced pinch-to-zoom handler with zoom-around-pointer
+  // Enhanced pinch-to-zoom handler - supports both touch devices and trackpad
   useEffect(() => {
     const wrapper = reactFlowWrapper.current
     if (!wrapper) return
 
+    // TRACKPAD PINCH HANDLER (for desktop)
+    const handleWheel = (e: WheelEvent) => {
+      // Trackpad pinch sends wheel events with ctrlKey
+      if (e.ctrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        const { x, y, zoom } = getViewport()
+        
+        // Get mouse position for zoom center
+        const cx = e.clientX
+        const cy = e.clientY
+        
+        // Trackpad pinch: negative deltaY = zoom in, positive = zoom out
+        // Very smooth 1.5% steps for maximum control
+        const scaleFactor = e.deltaY < 0 ? 1.015 : 0.985
+        const targetZoom = Math.max(0.05, Math.min(1, zoom * scaleFactor))
+        
+        // Zoom around mouse cursor
+        const contentX = (cx - x) / zoom
+        const contentY = (cy - y) / zoom
+        const newX = cx - contentX * targetZoom
+        const newY = cy - contentY * targetZoom
+        
+        setViewport({ x: newX, y: newY, zoom: targetZoom }, { duration: 0 })
+      }
+    }
+
+    // TOUCH PINCH HANDLER (for phones/tablets)
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        e.preventDefault()
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
         const dist = Math.hypot(
@@ -706,6 +735,7 @@ Return ONLY the JSON array, no other text:`
     const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2 && touchStartRef.current) {
         e.preventDefault()
+        e.stopPropagation()
         
         const touch1 = e.touches[0]
         const touch2 = e.touches[1]
@@ -714,36 +744,25 @@ Return ONLY the JSON array, no other text:`
           touch2.clientY - touch1.clientY
         )
 
-        // Directly control ReactFlow viewport; compute distance ratio
         const ratio = newDist / touchStartRef.current.dist
-
-        // Update for next frame
         touchStartRef.current.dist = newDist
 
-        if (!rafPendingRef.current) {
-          rafPendingRef.current = true
-          requestAnimationFrame(() => {
-            const { x, y, zoom } = getViewport()
-            const cx = (touch1.clientX + touch2.clientX) / 2
-            const cy = (touch1.clientY + touch2.clientY) / 2
+        const { x, y, zoom } = getViewport()
+        const cx = touchStartRef.current.x
+        const cy = touchStartRef.current.y
 
-            // Apply high sensitivity to pinch (higher = faster per inch)
-            const sensitivity = 20
-            const adjusted = Math.pow(ratio, sensitivity)
+        // High sensitivity exponential zoom for touch
+        const sensitivity = 0.08
+        const adjusted = Math.pow(ratio, 1 / sensitivity)
+        const targetZoom = Math.max(0.05, Math.min(1, zoom * adjusted))
 
-            // Clamp to 5%..100%
-            const targetZoom = Math.max(0.05, Math.min(1, zoom * adjusted))
+        // Zoom around pinch center
+        const contentX = (cx - x) / zoom
+        const contentY = (cy - y) / zoom
+        const newX = cx - contentX * targetZoom
+        const newY = cy - contentY * targetZoom
 
-            // Keep content under pinch center stable while zooming
-            const contentX = (cx - x) / zoom
-            const contentY = (cy - y) / zoom
-            const newX = cx - contentX * targetZoom
-            const newY = cy - contentY * targetZoom
-
-            setViewport({ x: newX, y: newY, zoom: targetZoom }, { duration: 0 })
-            rafPendingRef.current = false
-          })
-        }
+        setViewport({ x: newX, y: newY, zoom: targetZoom }, { duration: 0 })
       }
     }
 
@@ -751,19 +770,21 @@ Return ONLY the JSON array, no other text:`
       touchStartRef.current = null
     }
 
-    // Add listeners with passive: false to allow preventDefault
-    wrapper.addEventListener('touchstart', handleTouchStart, { passive: false })
-    wrapper.addEventListener('touchmove', handleTouchMove, { passive: false })
-    wrapper.addEventListener('touchend', handleTouchEnd)
-    wrapper.addEventListener('touchcancel', handleTouchEnd)
+    // Attach to wrapper with capture phase
+    wrapper.addEventListener('wheel', handleWheel, { capture: true, passive: false })
+    wrapper.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false })
+    wrapper.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false })
+    wrapper.addEventListener('touchend', handleTouchEnd, { capture: true })
+    wrapper.addEventListener('touchcancel', handleTouchEnd, { capture: true })
 
     return () => {
-      wrapper.removeEventListener('touchstart', handleTouchStart)
-      wrapper.removeEventListener('touchmove', handleTouchMove)
-      wrapper.removeEventListener('touchend', handleTouchEnd)
-      wrapper.removeEventListener('touchcancel', handleTouchEnd)
+      wrapper.removeEventListener('wheel', handleWheel, { capture: true })
+      wrapper.removeEventListener('touchstart', handleTouchStart, { capture: true })
+      wrapper.removeEventListener('touchmove', handleTouchMove, { capture: true })
+      wrapper.removeEventListener('touchend', handleTouchEnd, { capture: true })
+      wrapper.removeEventListener('touchcancel', handleTouchEnd, { capture: true })
     }
-  }, [])
+  }, [getViewport, setViewport])
 
   // Helper: zoom around a specific screen point to avoid "bouncing"
   const setZoomAnchored = useCallback((targetZoom: number, cx: number, cy: number, animateMs = 120) => {
@@ -849,8 +870,8 @@ Return ONLY the JSON array, no other text:`
           connectionMode={ConnectionMode.Loose}
           panOnScroll={true}
           panOnScrollSpeed={3}
-          zoomOnScroll={true}
-          zoomOnPinch={true}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
           zoomOnDoubleClick={true}
           preventScrolling={true}
           defaultEdgeOptions={{
