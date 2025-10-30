@@ -17,7 +17,7 @@ import {
   ConnectionMode,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Trash2, Edit, Sparkles, Filter, X } from 'lucide-react'
+import { Trash2, Edit, Sparkles, Filter, X, Zap } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Note } from '@/types/note'
@@ -33,72 +33,72 @@ interface CanvasViewProps {
   onDeleteNote: (id: string) => void
 }
 
-// Custom Note Node Component with connection handles
+// Custom Note Node Component
 function NoteNode({ data }: { data: any }) {
   return (
-    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 min-w-[200px] max-w-[300px] relative group">
-      {/* Connection handles - only visible on hover, more subtle with unique IDs */}
+    <div className="bg-white dark:bg-gray-900 border-2 border-gray-200/80 dark:border-gray-700/80 rounded-2xl shadow-lg hover:shadow-xl p-5 min-w-[220px] max-w-[320px] relative group transition-all duration-200 hover:-translate-y-1">
+      {/* Connection handles */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
-        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="w-3 h-3 !bg-blue-400 dark:!bg-blue-500 opacity-0 group-hover:opacity-80 transition-opacity !border-2 !border-white dark:!border-gray-800"
+        className="w-3 h-3 !bg-primary-500 dark:!bg-primary-400 opacity-0 group-hover:opacity-100 transition-opacity !border-2 !border-white dark:!border-gray-800 shadow-sm"
       />
       
-      <div className="flex items-start justify-between mb-2">
-        <h4 className="font-semibold text-sm line-clamp-2">{data.title || 'Untitled'}</h4>
-        <div className="flex gap-1 ml-2">
+      <div className="flex items-start justify-between mb-3">
+        <h4 className="font-semibold text-sm line-clamp-2 flex-1 text-gray-900 dark:text-gray-100">{data.title || 'Untitled'}</h4>
+        <div className="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={(e) => {
               e.stopPropagation()
               data.onEdit()
             }}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
             aria-label="Edit note"
           >
-            <Edit className="w-3 h-3 text-gray-500" />
+            <Edit className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation()
               data.onDelete()
             }}
-            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
             aria-label="Delete note"
           >
-            <Trash2 className="w-3 h-3 text-gray-500" />
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         </div>
       </div>
       {data.tags && data.tags.length > 0 && (
-        <div className="mb-2">
+        <div className="mb-3">
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
         </div>
       )}
       {data.content && (
-        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mt-2">
+        <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mt-2 leading-relaxed">
           {data.content}
         </p>
       )}
-      <p className="text-xs text-gray-400 mt-2">
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 font-medium">
         {new Date(data.updatedAt).toLocaleDateString()}
       </p>
     </div>
@@ -132,8 +132,8 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         id: note.id,
         type: 'noteNode',
         position: {
-          x: note.x ?? (index % 4) * 320 + 50,
-          y: note.y ?? Math.floor(index / 4) * 220 + 50,
+          x: note.x ?? (index % 4) * 350 + 50,
+          y: note.y ?? Math.floor(index / 4) * 250 + 50,
         },
         data: {
           title: note.title,
@@ -147,7 +147,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     [notes, onEditNote, onDeleteNote]
   )
 
-  // Convert database edges to React Flow edges with relationship type styling
+  // Convert database edges to React Flow edges with styling
   const initialEdges: Edge[] = useMemo(
     () =>
       filteredNoteEdges.map((edge) => {
@@ -163,7 +163,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
           animated: false,
           style: {
             stroke: relationshipType?.color || '#94a3b8',
-            strokeWidth: 1.5,
+            strokeWidth: 2,
           },
           type: 'smoothstep',
           data: {
@@ -183,7 +183,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     setNodes(initialNodes)
   }, [initialNodes, setNodes])
 
-  // Update edges when database changes - CRITICAL for AI auto-link
+  // Update edges when database changes
   useEffect(() => {
     setEdges(initialEdges)
   }, [filteredNoteEdges, setEdges, initialEdges])
@@ -193,12 +193,12 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     setSelectedEdge(edge.id)
   }, [])
 
-  // Clear selection when clicking canvas
+  // Clear selection
   const handlePaneClick = useCallback(() => {
     setSelectedEdge(null)
   }, [])
 
-  // Save node position to database
+  // Save node position
   const handleNodeDragStop: NodeMouseHandler = useCallback(
     async (_event, node) => {
       try {
@@ -213,7 +213,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     []
   )
 
-  // Handle new connection created by user - show relationship type modal
+  // Handle new connection
   const handleConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return
@@ -222,7 +222,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     []
   )
 
-  // Save connection with selected relationship type
+  // Save connection with type
   const saveConnectionWithType = useCallback(
     async (relationshipType: string) => {
       if (!pendingConnection) return
@@ -233,7 +233,6 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
       try {
         const relType = RELATIONSHIP_TYPES[relationshipType as keyof typeof RELATIONSHIP_TYPES]
         
-        // Save to database
         await db.edges.add({
           id: edgeId,
           source: pendingConnection.source!,
@@ -251,7 +250,7 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
     [pendingConnection]
   )
 
-  // Delete an edge
+  // Delete edge
   const handleEdgeDelete = useCallback(
     async (edgesToDelete: Edge[]) => {
       try {
@@ -270,7 +269,6 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
 
     setIsAutoLinking(true)
     try {
-      // Get all notes content with tags - use actual IDs, not indices
       const allTags = await db.tags.toArray()
       const tagMap = new Map(allTags.map(tag => [tag.id, tag.name]))
       
@@ -281,7 +279,6 @@ export function CanvasView({ notes, onEditNote, onDeleteNote }: CanvasViewProps)
         tags: n.tags?.map(tagId => tagMap.get(tagId)).filter(Boolean) || [],
       }))
 
-      // Use AI to find semantic relationships with relationship types, considering tags
       const prompt = `Analyze these notes and identify semantic relationships between them.
 
 Notes:
@@ -323,13 +320,10 @@ Return ONLY the JSON array, no other text:`
 
       console.log('AI Response:', result)
 
-      // Try to extract JSON from response
       let connections = []
       try {
-        // First try direct parse
         connections = JSON.parse(result.trim())
       } catch {
-        // Try to find JSON array in the response
         const jsonMatch = result.match(/\[\s*{[\s\S]*}\s*\]/)
         if (jsonMatch) {
           connections = JSON.parse(jsonMatch[0])
@@ -347,7 +341,6 @@ Return ONLY the JSON array, no other text:`
       const now = new Date().toISOString()
       let addedCount = 0
 
-      // Validate and create edges for new connections
       const validNoteIds = new Set(notes.map(n => n.id))
       
       for (const conn of connections) {
@@ -356,13 +349,11 @@ Return ONLY the JSON array, no other text:`
           continue
         }
 
-        // Validate that both IDs exist in our notes
         if (!validNoteIds.has(conn.source) || !validNoteIds.has(conn.target)) {
           console.warn('Skipping connection with invalid IDs:', conn, 'Valid IDs:', Array.from(validNoteIds))
           continue
         }
 
-        // Check if edge already exists (in either direction)
         const existingEdge = await db.edges
           .where('source')
           .equals(conn.source)
@@ -395,7 +386,7 @@ Return ONLY the JSON array, no other text:`
       }
 
       if (addedCount > 0) {
-        alert(`Successfully created ${addedCount} connection${addedCount > 1 ? 's' : ''}!`)
+        alert(`✨ Successfully created ${addedCount} connection${addedCount > 1 ? 's' : ''}!`)
       } else {
         alert('All suggested connections already exist.')
       }
@@ -409,45 +400,53 @@ Return ONLY the JSON array, no other text:`
   }, [notes, isAutoLinking, generateText])
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center gap-2">
-        {/* Instructions */}
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          <p>💡 Hover over notes to see connection points • {selectedEdge ? <strong className="text-red-500">Press DELETE to remove selected line</strong> : 'Click a line to select it'}</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Filter Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-              className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-              title="Filter by relationship type"
-            >
-              <Filter className="w-4 h-4" />
-              <span className="text-sm">
-                {selectedRelationshipFilter === 'all'
-                  ? 'All Types'
-                  : RELATIONSHIP_TYPES[selectedRelationshipFilter as keyof typeof RELATIONSHIP_TYPES]?.label || 'All Types'}
-              </span>
-            </button>
-            
-            {showFilterDropdown && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                <div className="p-2">
+    <div className="w-full h-full flex flex-col">
+      <div className="flex-shrink-0 px-4 sm:px-6 lg:px-8 py-4 border-b border-gray-200/60 dark:border-gray-800/60 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl">
+        <div className="flex justify-between items-center gap-3 max-w-[1920px] mx-auto">
+          {/* Instructions */}
+          <div className="text-sm text-gray-600 dark:text-gray-400 hidden lg:flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+            <span className="font-medium">
+              Hover over notes to connect •{' '}
+              {selectedEdge ? (
+                <strong className="text-red-500">Press DELETE to remove connection</strong>
+              ) : (
+                'Click a connection to select it'
+              )}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2 ml-auto">
+            {/* Filter Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="btn btn-secondary text-sm"
+                title="Filter by relationship type"
+              >
+                <Filter className="w-4 h-4" />
+                <span>
+                  {selectedRelationshipFilter === 'all'
+                    ? 'All Types'
+                    : RELATIONSHIP_TYPES[selectedRelationshipFilter as keyof typeof RELATIONSHIP_TYPES]?.label || 'All Types'}
+                </span>
+              </button>
+              
+              {showFilterDropdown && (
+                <div className="absolute right-0 mt-2 w-72 modal z-50 p-2">
                   <button
                     onClick={() => {
                       setSelectedRelationshipFilter('all')
                       setShowFilterDropdown(false)
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                    className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${
                       selectedRelationshipFilter === 'all'
-                        ? 'bg-blue-100 dark:bg-blue-900'
-                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <div className="font-medium">All Types</div>
-                    <div className="text-xs text-gray-500">Show all connections</div>
+                    <div className="font-semibold">All Types</div>
+                    <div className="text-xs text-gray-500 mt-1">Show all connections</div>
                   </button>
                   
                   {Object.values(RELATIONSHIP_TYPES).map((type) => (
@@ -457,52 +456,52 @@ Return ONLY the JSON array, no other text:`
                         setSelectedRelationshipFilter(type.id)
                         setShowFilterDropdown(false)
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-colors ${
+                      className={`w-full text-left px-4 py-3 rounded-xl transition-all mb-1 ${
                         selectedRelationshipFilter === type.id
-                          ? 'bg-blue-100 dark:bg-blue-900'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: type.color }}
                         />
-                        <span className="font-medium">{type.label}</span>
+                        <span className="font-semibold">{type.label}</span>
                       </div>
-                      <div className="text-xs text-gray-500 ml-5">{type.description}</div>
+                      <div className="text-xs text-gray-500 ml-6 mt-1">{type.description}</div>
                     </button>
                   ))}
                 </div>
-              </div>
+              )}
+            </div>
+            
+            {/* AI Auto-Link Button */}
+            {status.available && notes.length >= 2 && (
+              <button
+                onClick={handleAutoLink}
+                disabled={isAutoLinking}
+                className="btn bg-gradient-to-br from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white shadow-sm disabled:opacity-50"
+              >
+                <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
+                {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link'}
+              </button>
             )}
           </div>
-          
-          {/* AI Auto-Link Button */}
-          {status.available && notes.length >= 2 && (
-            <button
-              onClick={handleAutoLink}
-              disabled={isAutoLinking}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <Sparkles className={`w-4 h-4 ${isAutoLinking ? 'animate-spin' : ''}`} />
-              {isAutoLinking ? 'Finding Connections...' : 'AI Auto-Link Notes'}
-            </button>
-          )}
         </div>
       </div>
       
-      <div className="w-full h-[600px] border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
+      <div className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950" style={{ height: 'calc(100vh - 140px)' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges.map(edge => ({
             ...edge,
             selected: edge.id === selectedEdge,
-            animated: edge.id === selectedEdge, // Subtle animation only on selection
+            animated: edge.id === selectedEdge,
             style: {
               ...edge.style,
-              stroke: edge.id === selectedEdge ? '#ef4444' : '#94a3b8',
-              strokeWidth: edge.id === selectedEdge ? 2.5 : 1.5,
+              stroke: edge.id === selectedEdge ? '#ef4444' : edge.style?.stroke,
+              strokeWidth: edge.id === selectedEdge ? 3 : 2,
             },
           }))}
           onNodesChange={onNodesChange}
@@ -524,32 +523,43 @@ Return ONLY the JSON array, no other text:`
             type: 'smoothstep',
           }}
         >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-          <Controls />
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={24}
+            size={1.5}
+            className="bg-gray-50 dark:bg-gray-950"
+            color="#d6d3d1"
+          />
+          <Controls
+            className="!shadow-lg !border-gray-200/60 dark:!border-gray-800/60 !rounded-xl"
+            showInteractive={false}
+          />
           <MiniMap
             nodeStrokeWidth={3}
             zoomable
             pannable
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+            className="!bg-white/95 dark:!bg-gray-900/95 !border-gray-200/60 dark:!border-gray-800/60 !shadow-lg !rounded-xl"
+            nodeColor={() => '#e7e5e4'}
+            maskColor="rgba(0, 0, 0, 0.05)"
           />
         </ReactFlow>
       </div>
 
       {/* Relationship Type Selection Modal */}
       {pendingConnection && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Select Relationship Type</h3>
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="modal max-w-md w-full p-6 animate-scale-in">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Select Relationship Type</h3>
               <button
                 onClick={() => setPendingConnection(null)}
-                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="btn-icon"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
               Choose how these notes relate to each other:
             </p>
             
@@ -558,16 +568,16 @@ Return ONLY the JSON array, no other text:`
                 <button
                   key={type.id}
                   onClick={() => saveConnectionWithType(type.id)}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+                  className="card-hover w-full text-left p-4"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
                       style={{ backgroundColor: type.color }}
                     />
                     <div>
-                      <div className="font-medium">{type.label}</div>
-                      <div className="text-sm text-gray-500">{type.description}</div>
+                      <div className="font-semibold text-gray-900 dark:text-gray-100">{type.label}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{type.description}</div>
                     </div>
                   </div>
                 </button>

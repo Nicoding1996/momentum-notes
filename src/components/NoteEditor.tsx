@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff } from 'lucide-react'
+import { X, Save, Sparkles, FileText, Wand2, Mic, MicOff, Eye, Edit3 } from 'lucide-react'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -28,33 +28,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
 
-  // Voice transcription - live updates with smart replacement
+  // Voice transcription
   const handleTranscript = (text: string, isFinal: boolean) => {
     const trimmedText = text.trim()
     if (!trimmedText) return
 
     if (isFinal) {
-      // Replace interim with final, or append if no interim
       setContent((prev) => {
         if (interimStartPosRef.current !== null) {
-          // Replace interim text with final
           const beforeInterim = prev.substring(0, interimStartPosRef.current)
           interimStartPosRef.current = null
           return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
         }
-        // No interim, just append
         const prevTrim = prev.trim()
         return prevTrim ? `${prevTrim} ${trimmedText}` : trimmedText
       })
     } else {
-      // Update interim text live in content
       setContent((prev) => {
-        // Mark where interim starts on first interim result
         if (interimStartPosRef.current === null) {
           interimStartPosRef.current = prev.length
         }
-        
-        // Replace old interim with new interim
         const beforeInterim = prev.substring(0, interimStartPosRef.current)
         return beforeInterim.trim() ? `${beforeInterim.trimEnd()} ${trimmedText}` : trimmedText
       })
@@ -79,14 +72,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   useEffect(() => {
     if (!hasUnsavedChanges) return
 
-    // Clear previous timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
     }
 
-    // Set new timer
     autoSaveTimerRef.current = setTimeout(() => {
-      handleSave(true) // silent auto-save
+      handleSave(true)
     }, 2000)
 
     return () => {
@@ -104,12 +95,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S or Cmd+S to save
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
         handleSave()
       }
-      // Esc to close (with warning if unsaved)
       if (e.key === 'Escape') {
         handleClose()
       }
@@ -130,11 +119,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       updatedAt: now,
     }
     
-    // Only include tags if there are any
     if (tags.length > 0) {
       updatedNote.tags = tags
     } else {
-      // Remove tags property if empty
       delete updatedNote.tags
     }
 
@@ -152,13 +139,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
-      const confirmed = confirm('You have unsaved changes. Are you sure you want to close?')
+      const confirmed = confirm('You have unsaved changes. Close anyway?')
       if (!confirmed) return
     }
     onClose()
   }
 
-  // Track selected text
   const handleTextSelect = () => {
     const textarea = textareaRef.current
     if (textarea) {
@@ -177,7 +163,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     setAiLoading(true)
     try {
       const expanded = await expandText(selectedText, `This is part of a note titled: ${title}`)
-      // Replace selected text with expanded version
       const textarea = textareaRef.current
       if (textarea) {
         const start = textarea.selectionStart
@@ -203,7 +188,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     try {
       const summary = await summarizeText(textToSummarize, 'tl;dr')
       if (selectedText.trim()) {
-        // Replace selected text
         const textarea = textareaRef.current
         if (textarea) {
           const start = textarea.selectionStart
@@ -212,7 +196,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           setContent(newContent)
         }
       } else {
-        // Add summary at the top
         setContent(`📝 Summary: ${summary}\n\n---\n\n${content}`)
       }
     } catch (error) {
@@ -245,39 +228,38 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }
 
-  // Character and word count
   const charCount = content.length
   const wordCount = content.trim().split(/\s+/).filter(w => w.length > 0).length
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto animate-in">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+      <div
+        className="modal-backdrop"
         onClick={handleClose}
       />
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div 
-          className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-lg shadow-2xl"
+        <div
+          className="modal w-full max-w-5xl max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex-1 mr-4">
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex-1 mr-6">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Note title"
-                  className="w-full text-2xl font-semibold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-600"
+                  className="w-full text-3xl font-bold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 tracking-tight"
                 />
               </div>
               <button
                 onClick={handleClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible-ring"
+                className="btn-icon"
                 aria-label="Close editor"
               >
                 <X className="w-5 h-5" />
@@ -285,7 +267,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </div>
             
             {/* Tags Input */}
-            <div className="mt-3">
+            <div className="mt-4">
               <TagInput
                 tags={tags}
                 onChange={setTags}
@@ -294,225 +276,235 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </div>
           </div>
 
-          {/* AI Toolbar / Status */}
-          <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-3">
+          {/* AI Toolbar */}
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-8 py-4 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
             {aiStatus.available ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500 mr-2">AI Tools:</span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2 mr-auto">
+                  <Sparkles className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">AI Tools</span>
+                </div>
+                
                 <button
                   onClick={handleAIExpand}
                   disabled={aiLoading || !selectedText}
-                  className="px-3 py-1 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-100 dark:hover:bg-purple-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="btn btn-secondary text-sm disabled:opacity-40"
                   title="Expand selected text"
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-4 h-4" />
                   Expand
                 </button>
                 <button
                   onClick={handleAISummarize}
                   disabled={aiLoading}
-                  className="px-3 py-1 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  title="Summarize (selection or entire note)"
+                  className="btn btn-secondary text-sm disabled:opacity-40"
+                  title="Summarize"
                 >
-                  <FileText className="w-3 h-3" />
+                  <FileText className="w-4 h-4" />
                   Summarize
                 </button>
                 <button
                   onClick={handleAIImprove}
                   disabled={aiLoading || !selectedText}
-                  className="px-3 py-1 text-sm bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded hover:bg-green-100 dark:hover:bg-green-900/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="btn btn-secondary text-sm disabled:opacity-40"
                   title="Improve selected text"
                 >
-                  <Wand2 className="w-3 h-3" />
+                  <Wand2 className="w-4 h-4" />
                   Improve
                 </button>
                 
-                {/* Voice Transcription Button */}
-                <div className="ml-auto flex items-center gap-2">
-                  {voiceStatus.supported ? (
-                    <>
-                      <button
-                        onClick={toggleRecording}
-                        disabled={aiLoading}
-                        className={`px-3 py-1 text-sm rounded flex items-center gap-1 transition-colors ${
-                          voiceStatus.isRecording
-                            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30'
-                            : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        title={voiceStatus.isRecording ? 'Stop recording' : 'Start voice transcription'}
-                      >
-                        {voiceStatus.isRecording ? (
-                          <>
-                            <MicOff className="w-3 h-3" />
-                            Stop
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-3 h-3" />
-                            Record
-                          </>
-                        )}
-                      </button>
-                      {voiceStatus.isRecording && (
+                {/* Voice Button */}
+                {voiceStatus.supported && (
+                  <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={toggleRecording}
+                      disabled={aiLoading}
+                      className={`btn text-sm ${
+                        voiceStatus.isRecording
+                          ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30'
+                          : 'btn-secondary'
+                      }`}
+                      title={voiceStatus.isRecording ? 'Stop recording' : 'Start voice input'}
+                    >
+                      {voiceStatus.isRecording ? (
+                        <>
+                          <MicOff className="w-4 h-4" />
+                          Stop
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-4 h-4" />
+                          Record
+                        </>
+                      )}
+                    </button>
+                    {voiceStatus.isRecording && (
+                      <div className="flex items-center gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-red-600 dark:text-red-400 animate-pulse flex items-center gap-1">
-                            <span className="inline-block w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></span>
-                            Listening
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                           </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            (Speak clearly into your microphone)
-                          </span>
+                          <span className="text-sm text-red-600 dark:text-red-400 font-medium">Listening...</span>
                         </div>
-                      )}
-                      {voiceStatus.error && !voiceStatus.isRecording && (
-                        <span className="text-xs text-red-600 dark:text-red-400" title={voiceStatus.error}>
-                          {voiceStatus.error}
-                        </span>
-                      )}
-                    </>
-                  ) : voiceStatus.error ? (
-                    <span className="text-xs text-amber-600 dark:text-amber-400" title={voiceStatus.error}>
-                      Voice: Not supported
-                    </span>
-                  ) : null}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {aiLoading && (
-                  <span className="text-sm text-gray-500 animate-pulse">Processing...</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="w-1.5 h-1.5 bg-primary-600 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-primary-600 dark:text-primary-400 font-medium">Processing...</span>
+                  </div>
                 )}
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <div className="text-gray-500">
-                    AI tools unavailable. Ensure Chrome Built‑in AI is enabled. Origin: {location.origin}. Secure: {String(window.isSecureContext)}.
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={async () => {
-                        const result = await runDiagnosticProbe()
-                        alert(`Diagnostic Probe Results:\n\n${result}`)
-                      }}
-                      className="px-3 py-1 rounded bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/30"
-                      title="Test AI session creation directly"
-                    >
-                      Run Probe
-                    </button>
-                    <button
-                      onClick={refresh}
-                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      title="Re-check AI availability"
-                    >
-                      Re-check
-                    </button>
-                    <a
-                      href="chrome://flags/#prompt-api-for-gemini-nano"
-                      className="px-3 py-1 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Open Chrome flags"
-                    >
-                      Open flags
-                    </a>
-                  </div>
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="font-medium">AI tools unavailable</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      const result = await runDiagnosticProbe()
+                      alert(`Diagnostic Results:\n\n${result}`)
+                    }}
+                    className="btn-secondary text-xs"
+                  >
+                    Run Probe
+                  </button>
+                  <button onClick={refresh} className="btn-secondary text-xs">
+                    Re-check
+                  </button>
+                  <a
+                    href="chrome://flags/#prompt-api-for-gemini-nano"
+                    className="btn-secondary text-xs"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Flags
+                  </a>
                 </div>
               </div>
             )}
           </div>
 
           {/* Editor Mode Toggle */}
-          <div className="flex items-center justify-between px-6 pt-4">
-            <div className="inline-flex rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div className="flex items-center justify-between px-8 pt-6 pb-4">
+            <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden p-1 bg-gray-100/50 dark:bg-gray-800/50">
               <button
                 onClick={() => setMode('write')}
-                className={`px-3 py-1 text-sm ${mode === 'write' ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  mode === 'write'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
                 aria-pressed={mode === 'write'}
               >
-                Write
+                <div className="flex items-center gap-2">
+                  <Edit3 className="w-4 h-4" />
+                  Write
+                </div>
               </button>
               <button
                 onClick={() => setMode('preview')}
-                className={`px-3 py-1 text-sm ${mode === 'preview' ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                  mode === 'preview'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary-600 dark:text-primary-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
                 aria-pressed={mode === 'preview'}
               >
-                Preview
+                <div className="flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  Preview
+                </div>
               </button>
             </div>
           </div>
 
-          {/* Editor */}
-          {mode === 'write' ? (
-            <div className="px-6 py-4">
+          {/* Editor Content */}
+          <div className="flex-1 overflow-hidden px-8">
+            {mode === 'write' ? (
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => {
                   setContent(e.target.value)
-                  // Clear interim tracking if user manually edits
                   if (interimStartPosRef.current !== null) {
                     interimStartPosRef.current = null
                   }
                 }}
                 onSelect={handleTextSelect}
-                placeholder="Start writing..."
-                className="w-full h-96 bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-600 text-base leading-relaxed"
+                placeholder="Start writing your note..."
+                className="w-full h-full bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 custom-scrollbar py-4"
               />
-            </div>
-          ) : (
-            <div className="px-6 py-4">
-              <div className="h-96 overflow-y-auto text-base leading-relaxed prose dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  components={{
-                    // Style markdown elements
-                    strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>,
-                    em: ({ children }) => <em className="italic">{children}</em>,
-                    h1: ({ children }) => <h1 className="text-2xl font-bold mt-4 mb-2">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-xl font-bold mt-3 mb-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-lg font-bold mt-2 mb-1">{children}</h3>,
-                    ul: ({ children }) => <ul className="list-disc list-inside my-2">{children}</ul>,
-                    ol: ({ children }) => <ol className="list-decimal list-inside my-2">{children}</ol>,
-                    li: ({ children }) => <li className="my-1">{children}</li>,
-                    p: ({ children }) => <p className="my-2">{children}</p>,
-                    code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">{children}</code>,
-                    a: ({ children, href }) => <a href={href} className="text-primary-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-                  }}
-                >
-                  {content || '_Nothing to preview_'}
-                </ReactMarkdown>
+            ) : (
+              <div className="h-full overflow-y-auto py-4 custom-scrollbar">
+                <div className="prose-custom">
+                  <ReactMarkdown
+                    components={{
+                      strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      h1: ({ children }) => <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-2xl font-bold mt-5 mb-3">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-xl font-bold mt-4 mb-2">{children}</h3>,
+                      ul: ({ children }) => <ul className="list-disc list-inside my-3 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside my-3 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="my-1 text-gray-700 dark:text-gray-300">{children}</li>,
+                      p: ({ children }) => <p className="my-3 text-gray-700 dark:text-gray-300 leading-relaxed">{children}</p>,
+                      code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg text-sm font-mono text-primary-600 dark:text-primary-400">{children}</code>,
+                      a: ({ children, href }) => <a href={href} className="text-primary-600 dark:text-primary-400 hover:underline font-medium" target="_blank" rel="noopener noreferrer">{children}</a>,
+                    }}
+                  >
+                    {content || '_Nothing to preview yet_'}
+                  </ReactMarkdown>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-6 py-4">
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <span>{wordCount} words</span>
-              <span>•</span>
-              <span>{charCount} characters</span>
+          <div className="flex items-center justify-between border-t border-gray-200/60 dark:border-gray-800/60 px-8 py-5 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-900/50">
+            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{wordCount}</span>
+                <span>words</span>
+              </span>
+              <span className="text-gray-300 dark:text-gray-700">•</span>
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{charCount}</span>
+                <span>characters</span>
+              </span>
               {lastSaved && (
                 <>
-                  <span>•</span>
-                  <span>Saved {lastSaved.toLocaleTimeString()}</span>
+                  <span className="text-gray-300 dark:text-gray-700">•</span>
+                  <span className="text-success-600 dark:text-success-400">
+                    Saved {lastSaved.toLocaleTimeString()}
+                  </span>
                 </>
               )}
             </div>
 
             <div className="flex items-center gap-3">
               {hasUnsavedChanges && (
-                <span className="text-sm text-amber-600 dark:text-amber-400">
+                <span className="text-sm text-amber-600 dark:text-amber-400 font-medium mr-2 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                   Unsaved changes
                 </span>
               )}
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg focus-visible-ring"
+                className="btn-ghost"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleSave()}
                 disabled={isSaving || !hasUnsavedChanges}
-                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 focus-visible-ring flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? 'Saving...' : 'Save'}

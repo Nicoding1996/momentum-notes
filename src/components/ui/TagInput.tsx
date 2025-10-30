@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Tag as TagIcon } from 'lucide-react'
 import { db } from '@/lib/db'
 import { nanoid } from 'nanoid'
 import type { Tag } from '@/types/tag'
 
 interface TagInputProps {
-  tags: string[] // Array of tag IDs
+  tags: string[]
   onChange: (tags: string[]) => void
   placeholder?: string
 }
@@ -19,17 +19,14 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
   const inputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
-  // Load all tags from database
   useEffect(() => {
     loadTags()
   }, [])
 
-  // Load selected tags details
   useEffect(() => {
     loadSelectedTags()
   }, [tags])
 
-  // Filter suggestions based on input
   useEffect(() => {
     if (input.trim()) {
       const filtered = allTags.filter(
@@ -62,13 +59,11 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
   const createTag = async (name: string): Promise<Tag> => {
     const tagName = name.trim().toLowerCase()
     
-    // Check if tag already exists
     const existing = allTags.find((t) => t.name.toLowerCase() === tagName)
     if (existing) {
       return existing
     }
 
-    // Create new tag
     const newTag: Tag = {
       id: nanoid(),
       name: tagName,
@@ -84,7 +79,6 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
   const addTag = async (tag: Tag) => {
     if (tags.includes(tag.id)) return
 
-    // Update tag usage count
     await db.tags.update(tag.id, {
       usageCount: tag.usageCount + 1,
     })
@@ -92,20 +86,17 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
     onChange([...tags, tag.id])
     setInput('')
     setShowSuggestions(false)
-    loadTags() // Reload to get updated usage counts
+    loadTags()
   }
 
   const removeTag = async (tagId: string) => {
-    // Update tag usage count
     const tag = allTags.find((t) => t.id === tagId)
     if (tag) {
       const newCount = tag.usageCount - 1
       
       if (newCount <= 0) {
-        // Delete tag if no longer used by any notes
         await db.tags.delete(tagId)
       } else {
-        // Update usage count
         await db.tags.update(tagId, {
           usageCount: newCount,
         })
@@ -113,23 +104,20 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
     }
 
     onChange(tags.filter((id) => id !== tagId))
-    loadTags() // Reload to get updated usage counts
+    loadTags()
   }
 
   const handleInputKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && input.trim()) {
       e.preventDefault()
       
-      // If there are suggestions, use the first one
       if (suggestions.length > 0) {
         await addTag(suggestions[0])
       } else {
-        // Create new tag
         const newTag = await createTag(input)
         await addTag(newTag)
       }
     } else if (e.key === 'Backspace' && !input && selectedTags.length > 0) {
-      // Remove last tag when backspace is pressed on empty input
       await removeTag(selectedTags[selectedTags.length - 1].id)
     }
   }
@@ -139,7 +127,6 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
     inputRef.current?.focus()
   }
 
-  // Handle click outside to close suggestions
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -158,17 +145,18 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap gap-2 p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
+      <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:border-primary-500 transition-all">
         {/* Display selected tags */}
         {selectedTags.map((tag) => (
           <span
             key={tag.id}
-            className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-md"
+            className="tag group"
           >
+            <TagIcon className="w-3 h-3" />
             {tag.name}
             <button
               onClick={() => removeTag(tag.id)}
-              className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full p-0.5"
+              className="ml-1 hover:bg-primary-200 dark:hover:bg-primary-800 rounded-full p-0.5 transition-colors"
               aria-label={`Remove ${tag.name} tag`}
             >
               <X className="w-3 h-3" />
@@ -186,7 +174,7 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
             onKeyDown={handleInputKeyDown}
             onFocus={() => input.trim() && setShowSuggestions(suggestions.length > 0)}
             placeholder={selectedTags.length === 0 ? placeholder : ''}
-            className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm placeholder-gray-400 dark:placeholder-gray-600"
+            className="w-full bg-transparent border-none outline-none focus:ring-0 text-sm placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100"
           />
         </div>
       </div>
@@ -195,24 +183,34 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+          className="absolute z-10 w-full mt-2 modal max-h-60 overflow-y-auto custom-scrollbar p-2"
         >
           {suggestions.map((tag) => (
             <button
               key={tag.id}
               onClick={() => handleSuggestionClick(tag)}
-              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+              className="w-full px-4 py-3 text-left text-sm rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between group transition-all"
             >
-              <span>{tag.name}</span>
-              <span className="ml-auto text-xs text-gray-500">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/20 flex items-center justify-center group-hover:bg-primary-200 dark:group-hover:bg-primary-900/30 transition-colors">
+                  <TagIcon className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                </div>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{tag.name}</span>
+              </div>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 {tag.usageCount} {tag.usageCount === 1 ? 'note' : 'notes'}
               </span>
             </button>
           ))}
           {input.trim() && !suggestions.some((s) => s.name.toLowerCase() === input.toLowerCase()) && (
-            <div className="px-3 py-2 text-sm text-gray-500 border-t border-gray-200 dark:border-gray-800 flex items-center gap-2">
-              <Plus className="w-3 h-3" />
-              Press Enter to create "{input.trim().toLowerCase()}"
+            <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 flex items-center gap-3 mt-2 pt-3">
+              <div className="w-8 h-8 rounded-lg bg-success-100 dark:bg-success-900/20 flex items-center justify-center">
+                <Plus className="w-4 h-4 text-success-600 dark:text-success-400" />
+              </div>
+              <div>
+                <div className="font-medium text-gray-700 dark:text-gray-300">Create new tag</div>
+                <div className="text-xs">Press Enter to create "{input.trim().toLowerCase()}"</div>
+              </div>
             </div>
           )}
         </div>

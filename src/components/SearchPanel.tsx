@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Search, X, Calendar } from 'lucide-react'
+import { Search, X, Calendar, Tag as TagIcon, Sparkles } from 'lucide-react'
 import type { Note } from '@/types/note'
 import type { Tag } from '@/types/tag'
 import { db } from '@/lib/db'
@@ -18,12 +18,11 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all')
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null)
 
-  // Recalculate tag usage counts based on actual notes
+  // Recalculate tag usage counts
   const recalculateTagUsage = async () => {
     const notes = await db.notes.toArray()
     const tags = await db.tags.toArray()
     
-    // Count actual usage for each tag
     const usageCounts = new Map<string, number>()
     notes.forEach(note => {
       if (note.tags && note.tags.length > 0) {
@@ -33,31 +32,25 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
       }
     })
     
-    // Update or delete tags based on actual usage
     for (const tag of tags) {
       const actualCount = usageCounts.get(tag.id) || 0
       
       if (actualCount === 0) {
-        // Delete unused tags
         await db.tags.delete(tag.id)
       } else if (actualCount !== tag.usageCount) {
-        // Update incorrect counts
         await db.tags.update(tag.id, { usageCount: actualCount })
       }
     }
   }
 
-  // Load all notes and tags on mount
+  // Load all notes and tags
   useEffect(() => {
     const loadData = async () => {
-      // First recalculate and cleanup tags
       await recalculateTagUsage()
       
-      // Then load the cleaned data
       const notes = await db.notes.orderBy('updatedAt').reverse().toArray()
       const tags = await db.tags.toArray()
       
-      // Only show tags that are actually being used
       const tagsInUse = tags.filter(tag => tag.usageCount > 0)
       setAllNotes(notes)
       setAllTags(tagsInUse)
@@ -70,23 +63,16 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     const textLower = text.toLowerCase()
     const patternLower = pattern.toLowerCase()
     
-    // Exact match gets highest score
     if (textLower === patternLower) return 100
-    
-    // Starts with pattern gets high score
     if (textLower.startsWith(patternLower)) return 90
-    
-    // Contains whole pattern gets good score
     if (textLower.includes(patternLower)) return 80
     
-    // Word boundary match (pattern matches start of a word)
     const words = textLower.split(/\s+/)
     for (const word of words) {
       if (word.startsWith(patternLower)) return 70
       if (word.includes(patternLower)) return 60
     }
     
-    // Fuzzy matching - pattern characters appear in order
     let patternIdx = 0
     for (let i = 0; i < textLower.length && patternIdx < patternLower.length; i++) {
       if (textLower[i] === patternLower[patternIdx]) {
@@ -122,18 +108,15 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
   const searchResults = useMemo(() => {
     let filtered = allNotes.filter(filterByDate)
     
-    // Apply tag filter if selected
     if (selectedTagFilter) {
       filtered = filtered.filter(note => note.tags?.includes(selectedTagFilter))
     }
     
-    // Apply text search with scoring
     if (query.trim()) {
       const scoredNotes = filtered.map(note => {
         const titleScore = searchMatch(note.title, query)
         const contentScore = searchMatch(note.content, query)
         
-        // Search tag names
         let tagScore = 0
         if (note.tags && note.tags.length > 0) {
           const noteTags = allTags.filter(tag => note.tags?.includes(tag.id))
@@ -144,7 +127,6 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
         return { note, score: maxScore }
       }).filter(item => item.score > 0)
       
-      // Sort by score (highest first)
       scoredNotes.sort((a, b) => b.score - a.score)
       return scoredNotes.map(item => item.note)
     }
@@ -152,7 +134,6 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     return filtered
   }, [query, allNotes, allTags, dateFilter, selectedTagFilter])
 
-  // Update results when search changes
   useEffect(() => {
     setResults(searchResults)
   }, [searchResults])
@@ -170,7 +151,7 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     return (
       <>
         {text.substring(0, index)}
-        <mark className="bg-yellow-200 dark:bg-yellow-800">{text.substring(index, index + query.length)}</mark>
+        <mark className="bg-primary-200 dark:bg-primary-800/50 text-primary-900 dark:text-primary-100 px-1 rounded">{text.substring(index, index + query.length)}</mark>
         {text.substring(index + query.length)}
       </>
     )
@@ -186,7 +167,6 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     
     if (index === -1) return content.substring(0, maxLength) + (content.length > maxLength ? '...' : '')
     
-    // Show context around the match
     const start = Math.max(0, index - 50)
     const end = Math.min(content.length, index + query.length + 100)
     const excerpt = (start > 0 ? '...' : '') + content.substring(start, end) + (end < content.length ? '...' : '')
@@ -195,34 +175,36 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto animate-in">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+      <div
+        className="modal-backdrop"
         onClick={onClose}
       />
 
       {/* Search Panel */}
-      <div className="flex min-h-full items-start justify-center p-4 pt-20">
-        <div 
-          className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-lg shadow-2xl"
+      <div className="flex min-h-full items-start justify-center p-4 pt-24">
+        <div
+          className="modal w-full max-w-3xl animate-slide-up"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Search Input */}
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-            <div className="flex items-center gap-3">
-              <Search className="w-5 h-5 text-gray-400" />
+          <div className="p-6 border-b border-gray-200/60 dark:border-gray-800/60">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-primary-100 dark:bg-primary-900/20 rounded-xl">
+                <Search className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+              </div>
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search notes..."
+                placeholder="Search notes by title, content, or tags..."
                 autoFocus
-                className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-lg placeholder-gray-400 dark:placeholder-gray-600"
+                className="flex-1 bg-transparent border-none outline-none focus:ring-0 text-xl placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 font-medium"
               />
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="btn-icon"
                 aria-label="Close search"
               >
                 <X className="w-5 h-5" />
@@ -230,21 +212,23 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
             </div>
             
             {/* Filters */}
-            <div className="space-y-3 mt-4">
+            <div className="space-y-5">
               {/* Date Filter */}
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="w-4 h-4 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Date Range</span>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 bg-accent-100 dark:bg-accent-900/20 rounded-lg">
+                    <Calendar className="w-4 h-4 text-accent-600 dark:text-accent-400" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-tight">Time Range</span>
                 </div>
-                <div className="flex gap-2 flex-wrap ml-6">
+                <div className="flex gap-2 flex-wrap ml-8">
                   {(['all', 'today', 'week', 'month'] as const).map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setDateFilter(filter)}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                         dateFilter === filter
-                          ? 'bg-blue-500 text-white shadow-sm'
+                          ? 'bg-gradient-to-br from-accent-600 to-accent-700 text-white shadow-sm'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -257,16 +241,18 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
               {/* Tag Filter */}
               {allTags.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-4 h-4 flex items-center justify-center text-green-500 font-bold text-xs">#</span>
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Filter by Tags</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1.5 bg-success-100 dark:bg-success-900/20 rounded-lg">
+                      <TagIcon className="w-4 h-4 text-success-600 dark:text-success-400" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 tracking-tight">Filter by Tags</span>
                   </div>
-                  <div className="flex gap-2 flex-wrap ml-6">
+                  <div className="flex gap-2 flex-wrap ml-8">
                     <button
                       onClick={() => setSelectedTagFilter(null)}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                      className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                         selectedTagFilter === null
-                          ? 'bg-green-500 text-white shadow-sm'
+                          ? 'bg-gradient-to-br from-success-600 to-success-700 text-white shadow-sm'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -276,10 +262,10 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
                       <button
                         key={tag.id}
                         onClick={() => setSelectedTagFilter(tag.id)}
-                        className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        className={`px-4 py-2 text-sm font-medium rounded-xl transition-all ${
                           selectedTagFilter === tag.id
-                            ? 'bg-green-500 text-white shadow-sm'
-                            : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30'
+                            ? 'bg-gradient-to-br from-success-600 to-success-700 text-white shadow-sm'
+                            : 'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-300 hover:bg-success-100 dark:hover:bg-success-900/30 border border-success-200/50 dark:border-success-800/50'
                         }`}
                       >
                         {tag.name}
@@ -292,13 +278,18 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
           </div>
 
           {/* Results */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-[50vh] overflow-y-auto custom-scrollbar">
             {results.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                {query ? 'No notes found' : 'Start typing to search'}
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                  <Search className="w-8 h-8 text-gray-400" />
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">
+                  {query ? 'No notes found matching your search' : 'Start typing to search your notes'}
+                </p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+              <ul className="divide-y divide-gray-200/60 dark:divide-gray-800/60">
                 {results.map((note) => (
                   <li
                     key={note.id}
@@ -306,21 +297,30 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
                       onSelectNote(note)
                       onClose()
                     }}
-                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                    className="p-5 hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-all group border-l-4 border-transparent hover:border-primary-500"
                   >
-                    <h4 className="font-semibold mb-1">
-                      {highlightText(note.title || 'Untitled', query)}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {new Date(note.updatedAt).toLocaleString()}
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-semibold text-base text-gray-900 dark:text-gray-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                        {highlightText(note.title || 'Untitled', query)}
+                      </h4>
+                      <Sparkles className="w-4 h-4 text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-medium">
+                      {new Date(note.updatedAt).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                     {note.tags && note.tags.length > 0 && (
-                      <div className="mb-2">
+                      <div className="mb-3">
                         <TagDisplay tagIds={note.tags} maxDisplay={3} />
                       </div>
                     )}
                     {note.content && (
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                         {highlightText(getExcerpt(note.content, query), query)}
                       </p>
                     )}
@@ -331,8 +331,11 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
           </div>
 
           {/* Footer */}
-          <div className="p-3 border-t border-gray-200 dark:border-gray-800 text-sm text-gray-500 text-center">
-            {results.length} {results.length === 1 ? 'note' : 'notes'} found
+          <div className="p-4 border-t border-gray-200/60 dark:border-gray-800/60 text-sm text-center bg-gradient-to-r from-transparent via-gray-50/50 to-transparent dark:via-gray-900/50">
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{results.length}</span>
+            <span className="text-gray-500 dark:text-gray-400 ml-1">
+              {results.length === 1 ? 'note found' : 'notes found'}
+            </span>
           </div>
         </div>
       </div>
