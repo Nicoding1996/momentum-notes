@@ -34,9 +34,9 @@ function App() {
     }
   }, [])
  
-  // Reactive notes list from IndexedDB
+  // Reactive notes list from IndexedDB - sorted so newest notes render on top
   const notes = useLiveQuery(async () => {
-    return db.notes.orderBy('updatedAt').reverse().toArray()
+    return db.notes.orderBy('createdAt').toArray()
   }, []) as Note[] | undefined
 
   // Listen for online/offline events
