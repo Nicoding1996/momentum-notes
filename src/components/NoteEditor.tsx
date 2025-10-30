@@ -580,7 +580,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           )}
 
           {/* Editor Content */}
-          <div className={`overflow-hidden ${isFocusMode ? 'flex-1 h-full px-8 py-6' : 'flex-1 px-6 py-3'}`}>
+          <div className="flex-1 overflow-hidden px-6 py-3">
             {mode === 'write' ? (
               <textarea
                 ref={textareaRef}
@@ -593,10 +593,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 }}
                 onSelect={handleTextSelect}
                 placeholder="Start writing your note..."
-                className="w-full h-full bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 custom-scrollbar"
+                className="w-full h-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 resize-none placeholder-gray-400 dark:placeholder-gray-500 text-base leading-relaxed text-gray-900 dark:text-gray-100 custom-scrollbar"
               />
             ) : (
-              <div className="h-full min-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="h-full min-h-[500px] overflow-y-auto custom-scrollbar">
                 <div className="prose-custom">
                   <ReactMarkdown
                     components={{
