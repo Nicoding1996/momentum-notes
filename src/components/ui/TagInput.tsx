@@ -145,12 +145,12 @@ export function TagInput({ tags, onChange, placeholder = 'Add tags...' }: TagInp
 
   return (
     <div className="relative">
-      <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:border-primary-500 transition-all">
+      <div className="flex flex-wrap gap-1.5 p-2 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 focus-within:ring-2 focus-within:ring-primary-500/50 focus-within:border-primary-500 transition-all">
         {/* Display selected tags */}
         {selectedTags.map((tag) => (
           <span
             key={tag.id}
-            className="tag group"
+            className="tag-sm group"
           >
             <TagIcon className="w-3 h-3" />
             {tag.name}

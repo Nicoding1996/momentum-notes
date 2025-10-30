@@ -201,6 +201,13 @@
     @apply transition-all duration-200;
   }
 
+  .tag-sm {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium;
+    @apply bg-primary-50 dark:bg-primary-900/20;
+    @apply text-primary-700 dark:text-primary-300;
+    @apply border border-primary-200/50 dark:border-primary-800/50;
+  }
+
   .tag-success {
     @apply bg-success-50 dark:bg-success-900/20;
     @apply text-success-700 dark:text-success-300;
