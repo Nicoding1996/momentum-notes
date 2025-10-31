@@ -904,20 +904,6 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           </div>
           )}
 
-          {/* Focus Mode Toggle */}
-          {!isFocusMode && (
-          <div className="flex items-center justify-end px-6 py-3">
-            <button
-              onClick={() => setIsFocusMode(true)}
-              className="btn btn-ghost text-xs px-3 py-1.5"
-              title="Enter Focus Mode (Esc to exit)"
-            >
-              <Maximize2 className="w-3.5 h-3.5" />
-              Focus
-            </button>
-          </div>
-          )}
-
           {/* Formatting Toolbar - Always visible */}
           {!isFocusMode && (
             <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-2 bg-gray-50/50 dark:bg-gray-900/50">
@@ -1061,7 +1047,18 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           {/* WYSIWYG Editor Content with Sidebar */}
           <div className="flex flex-1 overflow-hidden">
             {/* Editor (left side) */}
-            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
+            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''} relative`}>
+              {/* Focus Mode Button - Floating on editor */}
+              {!isFocusMode && (
+                <button
+                  onClick={() => setIsFocusMode(true)}
+                  className="absolute top-4 right-4 btn btn-ghost text-xs px-3 py-1.5 shadow-sm z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-900"
+                  title="Enter Focus Mode (Esc to exit)"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  Focus
+                </button>
+              )}
               <EditorContent editor={editor} className="editor-content-enhanced" />
               
               {/* Wikilink Autocomplete */}
