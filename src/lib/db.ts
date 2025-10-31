@@ -3,11 +3,13 @@ import { nanoid } from 'nanoid';
 import type { Note } from '../types/note';
 import type { NoteEdge } from '../types/edge';
 import type { Tag } from '../types/tag';
+import type { WikiLink } from '../types/wikilink';
 
 class NotesDB extends Dexie {
   notes!: Table<Note, string>;
   edges!: Table<NoteEdge, string>;
   tags!: Table<Tag, string>;
+  wikilinks!: Table<WikiLink, string>;
 
   constructor() {
     super('momentum_notes_db');
@@ -27,6 +29,12 @@ class NotesDB extends Dexie {
       notes: 'id, updatedAt, createdAt, *tags',
       edges: 'id, source, target, createdAt, relationshipType', // added relationshipType index
       tags: 'id, name, usageCount',
+    });
+    this.version(5).stores({
+      notes: 'id, updatedAt, createdAt, *tags',
+      edges: 'id, source, target, createdAt, relationshipType',
+      tags: 'id, name, usageCount',
+      wikilinks: 'id, sourceNoteId, targetNoteId, targetTitle, [sourceNoteId+targetTitle]', // compound index for fast lookups
     });
   }
 }

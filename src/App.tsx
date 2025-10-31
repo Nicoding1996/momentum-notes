@@ -103,6 +103,22 @@ function App() {
   const closeEditor = () => {
     setEditingNote(null)
   }
+  
+  const handleNavigateToNote = async (noteId: string) => {
+    console.log('App: handleNavigateToNote called with:', noteId)
+    try {
+      const note = await db.notes.get(noteId)
+      console.log('App: Found note:', note)
+      if (note) {
+        setEditingNote(note)
+        console.log('App: Set editing note to:', note.title)
+      } else {
+        console.log('App: Note not found in database')
+      }
+    } catch (error) {
+      console.error('App: Error navigating to note:', error)
+    }
+  }
 
   return (
     <ToastProvider>
@@ -364,7 +380,11 @@ function App() {
 
       {/* Note Editor Modal */}
       {editingNote && (
-        <NoteEditor note={editingNote} onClose={closeEditor} />
+        <NoteEditor
+          note={editingNote}
+          onClose={closeEditor}
+          onNavigateToNote={handleNavigateToNote}
+        />
       )}
 
       {/* Search Panel */}

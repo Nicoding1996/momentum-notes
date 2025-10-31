@@ -5,6 +5,7 @@ import UnderlineExtension from '@tiptap/extension-underline'
 import ImageExtension from '@tiptap/extension-image'
 import { X, Save, Sparkles, Mic, MicOff, Maximize2, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Image } from 'lucide-react'
 import { marked } from 'marked'
+import { nanoid } from 'nanoid'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -14,13 +15,17 @@ import { useToast } from '@/contexts/ToastContext'
 import { TagInput } from '@/components/ui/TagInput'
 import { AIChatPanel } from '@/components/AIChatPanel'
 import { TextContextMenu } from '@/components/ui/TextContextMenu'
+import { WikilinkExtension } from '@/extensions/WikilinkExtension'
+import { WikilinkAutocomplete } from '@/components/WikilinkAutocomplete'
+import { findNoteByTitle, scanAndSyncWikilinks } from '@/lib/wikilink-sync'
 
 interface NoteEditorProps {
   note: Note
   onClose: () => void
+  onNavigateToNote?: (noteId: string) => void
 }
 
-export function NoteEditor({ note, onClose }: NoteEditorProps) {
+export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title)
   const [content, setContent] = useState(note.content)
   const [tags, setTags] = useState<string[]>(note.tags || [])
@@ -40,15 +45,128 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
+  // Wikilink autocomplete state
+  const [autocompleteState, setAutocompleteState] = useState<{
+    active: boolean
+    query: string
+    position: { top: number; left: number }
+  } | null>(null)
+  
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
   const { showToast } = useToast()
+  
+  // Wikilink handlers
+  const handleNavigateToNote = async (noteId: string) => {
+    console.log('NoteEditor: handleNavigateToNote called with:', noteId)
+    console.log('NoteEditor: onNavigateToNote prop exists?', !!onNavigateToNote)
+    
+    // Save current note first
+    await handleSave(true)
+    console.log('NoteEditor: Note saved')
+    
+    // Load and open the linked note
+    const linkedNote = await db.notes.get(noteId)
+    console.log('NoteEditor: Found linked note:', linkedNote)
+    
+    if (linkedNote) {
+      if (onNavigateToNote) {
+        // Use parent's navigation handler
+        console.log('NoteEditor: Calling parent navigation handler')
+        onNavigateToNote(noteId)
+      } else {
+        // Fallback: just show toast
+        console.log('NoteEditor: No parent handler, showing toast')
+        showToast(`Navigating to: ${linkedNote.title}`, 'info', 2000)
+      }
+    } else {
+      console.log('NoteEditor: Linked note not found')
+    }
+  }
+  
+  const validateWikilinkTarget = async (title: string): Promise<string | null> => {
+    return await findNoteByTitle(title)
+  }
+  
+  const handleTriggerAutocomplete = (query: string, position: number) => {
+    if (!editor) return
+    
+    // Get cursor position on screen
+    const coords = editor.view.coordsAtPos(position)
+    
+    setAutocompleteState({
+      active: true,
+      query,
+      position: {
+        top: coords.bottom + 8,
+        left: coords.left,
+      },
+    })
+  }
+  
+  const handleAutocompleteSelect = async (selectedNote: Note) => {
+    if (!editor) return
+    
+    // Find the [[ pattern and replace it with wikilink
+    const { state } = editor
+    const { selection } = state
+    const { $from } = selection
+    
+    // Get text before cursor
+    const textBefore = $from.parent.textBetween(
+      Math.max(0, $from.parentOffset - 50),
+      $from.parentOffset
+    )
+    
+    const match = textBefore.match(/\[\[([^\]]*?)$/)
+    if (match) {
+      const matchLength = match[0].length
+      const from = $from.pos - matchLength
+      const to = $from.pos
+      
+      // Replace [[ with wikilink node
+      editor.chain()
+        .focus()
+        .deleteRange({ from, to })
+        .insertContentAt(from, {
+          type: 'wikilink',
+          attrs: {
+            targetNoteId: selectedNote.id,
+            targetTitle: selectedNote.title,
+            exists: true,
+          },
+        })
+        .run()
+      
+      // Save wikilink to database
+      const wikilinkId = nanoid()
+      await db.wikilinks.add({
+        id: wikilinkId,
+        sourceNoteId: note.id,
+        targetNoteId: selectedNote.id,
+        targetTitle: selectedNote.title,
+        position: from,
+        createdAt: new Date().toISOString(),
+        relationshipType: 'references',
+      })
+      
+      showToast(`Linked to ${selectedNote.title}`, 'success', 2000)
+    }
+    
+    // Close autocomplete
+    setAutocompleteState(null)
+  }
 
-  // Tiptap Editor
+  // Tiptap Editor with Wikilink extension
   const editor = useEditor({
     extensions: [
       StarterKit,
       UnderlineExtension,
       ImageExtension,
+      WikilinkExtension.configure({
+        onNavigate: handleNavigateToNote,
+        onTriggerAutocomplete: handleTriggerAutocomplete,
+        validateTarget: validateWikilinkTarget,
+      }),
     ],
     content: content,
     onUpdate: ({ editor }) => {
@@ -62,12 +180,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     },
   })
 
-  // Update editor content when note changes
+  // Update all state AND editor when note prop changes (for navigation)
   useEffect(() => {
-    if (editor && editor.getHTML() !== content) {
-      editor.commands.setContent(content)
+    setTitle(note.title)
+    setContent(note.content)
+    setTags(note.tags || [])
+    setLastSavedTitle(note.title)
+    setLastSavedContent(note.content)
+    setLastSavedTags(note.tags || [])
+    setHasUnsavedChanges(false)
+    setContentHistory([])
+    setAutocompleteState(null)
+    
+    // Update editor content immediately
+    if (editor) {
+      editor.commands.setContent(note.content)
+      console.log('NoteEditor: Editor content updated to:', note.title)
     }
-  }, [note.id])
+    
+    console.log('NoteEditor: State updated for note:', note.title)
+  }, [note.id, editor])
 
   // Text selection (for AI context menu - still used)
   const {
@@ -245,6 +377,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
     try {
       await db.notes.put(updatedNote)
+      
+      // Scan and sync wikilinks
+      await scanAndSyncWikilinks(note.id, currentContent)
       
       // Update the content state to match what we saved
       setContent(currentContent)
@@ -728,6 +863,17 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           {/* WYSIWYG Editor Content */}
           <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
             <EditorContent editor={editor} className="editor-content-enhanced" />
+            
+            {/* Wikilink Autocomplete */}
+            {autocompleteState?.active && (
+              <WikilinkAutocomplete
+                query={autocompleteState.query}
+                position={autocompleteState.position}
+                onSelect={handleAutocompleteSelect}
+                onClose={() => setAutocompleteState(null)}
+                excludeNoteId={note.id}
+              />
+            )}
           </div>
 
           {/* Footer */}
