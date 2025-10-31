@@ -9,6 +9,7 @@ import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
 import { useTextSelection } from '@/hooks/useTextSelection'
+import { useToast } from '@/contexts/ToastContext'
 import { TagInput } from '@/components/ui/TagInput'
 import { AIChatPanel } from '@/components/AIChatPanel'
 import { TextContextMenu } from '@/components/ui/TextContextMenu'
@@ -39,6 +40,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
+  const { showToast } = useToast()
 
   // Tiptap Editor
   const editor = useEditor({
@@ -251,9 +253,13 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       setLastSavedTags(updatedNote.tags || [])
       setHasUnsavedChanges(false)
       setLastSaved(new Date())
+      
+      if (!silent) {
+        showToast('Note saved successfully', 'success', 2000)
+      }
     } catch (error) {
       console.error('Failed to save note:', error)
-      alert('Failed to save note. Please try again.')
+      showToast('Failed to save note. Please try again.', 'error', 4000)
     } finally {
       if (!silent) setIsSaving(false)
     }
@@ -272,13 +278,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     if (!selectedText.trim()) return
     
     setAiLoading(true)
+    
     try {
       setContentHistory(prev => [...prev, content])
       const expanded = await expandText(selectedText, `This is part of a note titled: ${title}`)
       replaceSelection(expanded, setContent)
       closeContextMenu()
+      
+      showToast('Text expanded successfully', 'success', 2000)
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to expand text')
+      showToast(error instanceof Error ? error.message : 'Failed to expand text', 'error', 4000)
     } finally {
       setAiLoading(false)
     }
@@ -288,13 +297,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     if (!selectedText.trim()) return
     
     setAiLoading(true)
+    
     try {
       setContentHistory(prev => [...prev, content])
       const summary = await summarizeText(selectedText, 'tl;dr')
       replaceSelection(summary, setContent)
       closeContextMenu()
+      
+      showToast('Text summarized successfully', 'success', 2000)
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to summarize')
+      showToast(error instanceof Error ? error.message : 'Failed to summarize', 'error', 4000)
     } finally {
       setAiLoading(false)
     }
@@ -304,13 +316,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     if (!selectedText.trim()) return
     
     setAiLoading(true)
+    
     try {
       setContentHistory(prev => [...prev, content])
       const improved = await improveWriting(selectedText)
       replaceSelection(improved, setContent)
       closeContextMenu()
+      
+      showToast('Text improved successfully', 'success', 2000)
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to improve text')
+      showToast(error instanceof Error ? error.message : 'Failed to improve text', 'error', 4000)
     } finally {
       setAiLoading(false)
     }
@@ -371,6 +386,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     // Update both React state and Tiptap editor
     setContent(previousContent)
     editor.commands.setContent(previousContent)
+    
+    showToast('Change undone', 'info', 2000)
   }
 
   const charCount = content.length

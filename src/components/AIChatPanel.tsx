@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, Loader2, Check, Copy, Undo2 } from 'lucide-react'
 import { useChromeAI } from '@/hooks/useChromeAI'
+import { useToast } from '@/contexts/ToastContext'
 import type { Note } from '@/types/note'
 
 interface AIChatPanelProps {
@@ -26,6 +27,7 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [quickSuggestions, setQuickSuggestions] = useState<string[]>([])
   const { generateText, status } = useChromeAI()
+  const { showToast } = useToast()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [hasAnalyzed, setHasAnalyzed] = useState(false)
@@ -287,6 +289,9 @@ Begin your response now:`
       })
 
       setMessages((prev) => [...prev, assistantMessage])
+      
+      // Show success toast
+      showToast('AI response generated successfully', 'success', 2000)
     } catch (error) {
       console.error('AI chat error:', error)
       const errorMessage: Message = {
@@ -296,6 +301,13 @@ Begin your response now:`
         isActionable: false,
       }
       setMessages((prev) => [...prev, errorMessage])
+      
+      // Show error toast
+      showToast(
+        error instanceof Error ? error.message : 'Failed to process AI request',
+        'error',
+        4000
+      )
     } finally {
       setIsProcessing(false)
     }
@@ -306,9 +318,21 @@ Begin your response now:`
       await navigator.clipboard.writeText(content)
       setCopiedIndex(index)
       setTimeout(() => setCopiedIndex(null), 2000)
+      showToast('Copied to clipboard', 'success', 2000)
     } catch (error) {
       console.error('Failed to copy:', error)
+      showToast('Failed to copy to clipboard', 'error', 3000)
     }
+  }
+
+  const handleReplaceWithToast = (content: string) => {
+    onReplaceContent(content)
+    showToast('Content replaced successfully', 'success', 2000)
+  }
+
+  const handleInsertWithToast = (content: string) => {
+    onInsertContent(content)
+    showToast('Content added to note', 'success', 2000)
   }
 
   if (!status.available) {
@@ -391,7 +415,7 @@ Begin your response now:`
                   {/* Replace Content - Only for REPLACE intent */}
                   {message.isActionable && message.intent === 'REPLACE' && (
                     <button
-                      onClick={() => onReplaceContent(stripFillerText(message.content))}
+                      onClick={() => handleReplaceWithToast(stripFillerText(message.content))}
                       className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
                     >
                       Replace Content
@@ -419,7 +443,7 @@ Begin your response now:`
                   
                   {/* Add to Note - Always available for ALL assistant messages */}
                   <button
-                    onClick={() => onInsertContent(stripFillerText(message.content))}
+                    onClick={() => handleInsertWithToast(stripFillerText(message.content))}
                     className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
                     title="Add content to your note"
                   >

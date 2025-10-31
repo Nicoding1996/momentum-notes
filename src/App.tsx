@@ -9,6 +9,8 @@ import { CanvasView } from '@/components/CanvasView'
 import { SearchPanel } from '@/components/SearchPanel'
 import { SettingsModal } from '@/components/SettingsModal'
 import { TagDisplay } from '@/components/ui/TagDisplay'
+import { ToastProvider } from '@/contexts/ToastContext'
+import { ToastContainer } from '@/components/ui/Toast'
 
 // Helper function to strip HTML tags for preview
 function stripHtmlTags(html: string): string {
@@ -103,7 +105,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex flex-col">
+    <ToastProvider>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex flex-col">
       {/* Header - Modern & Refined */}
       <header className="header-glass sticky top-0 z-50 h-16 flex-shrink-0">
         <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between max-w-[1920px] mx-auto">
@@ -381,7 +384,11 @@ function App() {
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} />
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer />
     </div>
+    </ToastProvider>
   )
 }
 
