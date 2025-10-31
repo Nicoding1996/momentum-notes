@@ -1273,8 +1273,8 @@ Return ONLY the JSON array, no other text:`
         const cy = e.clientY
         
         // Trackpad pinch: negative deltaY = zoom in, positive = zoom out
-        // Very smooth 1.5% steps for maximum control
-        const scaleFactor = e.deltaY < 0 ? 1.015 : 0.985
+        // Increased from 1.5% to 4% steps for faster zoom
+        const scaleFactor = e.deltaY < 0 ? 1.04 : 0.96
         const targetZoom = Math.max(0.05, Math.min(1, zoom * scaleFactor))
         
         // Zoom around mouse cursor
