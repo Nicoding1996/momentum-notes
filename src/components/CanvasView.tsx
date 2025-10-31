@@ -20,7 +20,7 @@ import {
   NodeChange,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Trash2, Edit, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react'
+import { Trash2, Edit, Sparkles, ZoomIn, ZoomOut } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { Note, NoteColorId } from '@/types/note'
@@ -33,6 +33,8 @@ import { TagDisplay } from '@/components/ui/TagDisplay'
 import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
 import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
+import { EdgeContextMenu } from '@/components/ui/EdgeContextMenu'
+import { useToast } from '@/contexts/ToastContext'
 
 interface CanvasViewProps {
   notes: Note[]
@@ -440,13 +442,21 @@ const nodeTypes: NodeTypes = {
 function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChange }: CanvasViewProps) {
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
-  const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
   const [showAutoLinkAlert, setShowAutoLinkAlert] = useState(false)
   const [autoLinkMessage, setAutoLinkMessage] = useState('')
   const [autoLinkVariant, setAutoLinkVariant] = useState<'info' | 'success' | 'warning'>('info')
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { setViewport, getViewport } = useReactFlow()
   const [currentZoom, setCurrentZoom] = useState(100)
+  const { showToast } = useToast()
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    edgeId: string
+    x: number
+    y: number
+    currentType?: string
+  } | null>(null)
   
   // Debounced save for performance - save positions after user stops dragging/resizing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -613,14 +623,26 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     setEdges(initialEdges)
   }, [noteEdges, setEdges, initialEdges])
 
-  // Handle edge selection
+  // Handle edge selection and right-click
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
     setSelectedEdge(edge.id)
   }, [])
 
-  // Clear selection
+  // Handle edge right-click for context menu
+  const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
+    event.preventDefault()
+    setContextMenu({
+      edgeId: edge.id,
+      x: event.clientX,
+      y: event.clientY,
+      currentType: edge.data?.relationshipType as string | undefined,
+    })
+  }, [])
+
+  // Clear selection and context menu
   const handlePaneClick = useCallback(() => {
     setSelectedEdge(null)
+    setContextMenu(null)
   }, [])
 
   // Debounced save function - batch database writes for better performance
@@ -702,41 +724,34 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     }
   }, [])
 
-  // Handle new connection
+  // Handle new connection - use default "related-to" type
   const handleConnect = useCallback(
-    (connection: Connection) => {
+    async (connection: Connection) => {
       if (!connection.source || !connection.target) return
-      setPendingConnection(connection)
-    },
-    []
-  )
-
-  // Save connection with type
-  const saveConnectionWithType = useCallback(
-    async (relationshipType: string) => {
-      if (!pendingConnection) return
 
       const edgeId = nanoid()
       const now = new Date().toISOString()
 
       try {
-        const relType = RELATIONSHIP_TYPES[relationshipType as keyof typeof RELATIONSHIP_TYPES]
+        const relType = RELATIONSHIP_TYPES.RELATED_TO
         
         await db.edges.add({
           id: edgeId,
-          source: pendingConnection.source!,
-          target: pendingConnection.target!,
+          source: connection.source,
+          target: connection.target,
           createdAt: now,
-          relationshipType: relationshipType,
-          label: relType?.label,
+          relationshipType: 'related-to',
+          label: relType.label,
         })
 
-        setPendingConnection(null)
+        // Show toast with hint about right-click
+        showToast('Connection created! Right-click to change relationship type.', 'success')
       } catch (error) {
         console.error('Failed to save edge:', error)
+        showToast('Failed to create connection', 'error')
       }
     },
-    [pendingConnection]
+    [showToast]
   )
 
   // Delete edge
@@ -1072,6 +1087,7 @@ Return ONLY the JSON array, no other text:`
           onConnect={handleConnect}
           onEdgesDelete={handleEdgeDelete}
           onEdgeClick={handleEdgeClick}
+          onEdgeContextMenu={handleEdgeContextMenu}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
@@ -1187,7 +1203,7 @@ Return ONLY the JSON array, no other text:`
           />
         </ReactFlow>
 
-        {/* Floating AI Auto-Link Button - Only show with 3+ notes */}
+        {/* Floating Discover Connections Button - Only show with 3+ notes */}
         {status.available && notes.length >= 3 && (
           <button
             onClick={handleAutoLink}
@@ -1197,53 +1213,26 @@ Return ONLY the JSON array, no other text:`
               boxShadow: '0 -1px 2px 0 rgba(255, 255, 255, 0.3) inset, 0 4px 12px -2px rgba(255, 215, 0, 0.4), 0 2px 6px -1px rgba(0, 0, 0, 0.1)',
               willChange: 'transform, box-shadow',
             }}
+            title="AI will analyze your notes and suggest semantic connections"
           >
             <Sparkles className="w-5 h-5" />
-            <span>{isAutoLinking ? 'Analyzing...' : 'AI Auto-Link'}</span>
+            <span>{isAutoLinking ? 'Discovering...' : 'Discover Connections'}</span>
           </button>
         )}
       </div>
 
-      {/* Relationship Type Selection Modal */}
-      {pendingConnection && (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="modal max-w-md w-full p-6 animate-scale-in">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Select Relationship Type</h3>
-              <button
-                onClick={() => setPendingConnection(null)}
-                className="btn-icon"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed">
-              Choose how these notes relate to each other:
-            </p>
-            
-            <div className="space-y-2">
-              {Object.values(RELATIONSHIP_TYPES).map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => saveConnectionWithType(type.id)}
-                  className="card-hover w-full text-left p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
-                      style={{ backgroundColor: type.color }}
-                    />
-                    <div>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">{type.label}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{type.description}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Edge Context Menu */}
+      {contextMenu && (
+        <EdgeContextMenu
+          edgeId={contextMenu.edgeId}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          currentType={contextMenu.currentType}
+          onClose={() => setContextMenu(null)}
+          onTypeChange={() => {
+            // Edges will update automatically via live query
+          }}
+        />
       )}
 
       {/* AI Auto-Link Result Modal */}
