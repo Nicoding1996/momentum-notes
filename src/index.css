@@ -35,6 +35,66 @@
 }
 
 @layer components {
+  /* Enhanced Editor Content Styles */
+  .editor-content-enhanced {
+    @apply min-h-[400px] sm:min-h-[500px] lg:min-h-[600px];
+  }
+  
+  .editor-content-enhanced .ProseMirror {
+    @apply outline-none min-h-[400px] sm:min-h-[500px] lg:min-h-[600px];
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
+    line-height: 1.75;
+    letter-spacing: -0.011em;
+  }
+  
+  .editor-content-enhanced .ProseMirror p {
+    @apply mb-4;
+    font-size: clamp(1rem, 1.5vw, 1.125rem);
+    line-height: 1.75;
+  }
+  
+  .editor-content-enhanced .ProseMirror h1 {
+    @apply text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 mt-8;
+    line-height: 1.2;
+  }
+  
+  .editor-content-enhanced .ProseMirror h2 {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 mt-6;
+    line-height: 1.3;
+  }
+  
+  .editor-content-enhanced .ProseMirror h3 {
+    @apply text-xl sm:text-2xl lg:text-3xl font-semibold mb-3 mt-5;
+    line-height: 1.4;
+  }
+  
+  .editor-content-enhanced .ProseMirror ul,
+  .editor-content-enhanced .ProseMirror ol {
+    @apply pl-6 sm:pl-8 mb-4;
+  }
+  
+  .editor-content-enhanced .ProseMirror li {
+    @apply mb-2;
+    font-size: clamp(1rem, 1.5vw, 1.125rem);
+    line-height: 1.75;
+  }
+  
+  .editor-content-enhanced .ProseMirror blockquote {
+    @apply border-l-4 border-accent-400 pl-4 sm:pl-6 italic my-4;
+  }
+  
+  .editor-content-enhanced .ProseMirror code {
+    @apply bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-sm;
+  }
+  
+  .editor-content-enhanced .ProseMirror pre {
+    @apply bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4 overflow-x-auto;
+  }
+  
+  .editor-content-enhanced .ProseMirror img {
+    @apply max-w-full h-auto rounded-lg my-4;
+  }
+
   /* Enhanced scrollbar styles */
   .custom-scrollbar {
     scrollbar-width: thin;
@@ -245,11 +305,34 @@
     animation: fadeIn 0.2s ease-out;
   }
 
-  /* Modal container */
+  /* Modal container - Enhanced for zoom */
   .modal {
-    @apply relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl;
+    @apply relative bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-2xl;
     @apply border border-gray-200/60 dark:border-gray-800/60;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    /* Ensure modal scales properly with zoom */
+    max-width: 95vw;
+    contain: layout style paint;
+  }
+  
+  /* Responsive utilities for better zoom handling */
+  @media (max-width: 640px) {
+    .modal {
+      @apply rounded-lg;
+      margin: 0.5rem;
+    }
+  }
+  
+  @media (min-width: 1920px) {
+    .modal {
+      font-size: 110%;
+    }
+  }
+  
+  @media (min-width: 2560px) {
+    .modal {
+      font-size: 125%;
+    }
   }
 }
 
@@ -300,13 +383,38 @@
       0 4px 10px -2px rgba(0, 0, 0, 0.1);
   }
 
-  /* Height utilities */
+  /* Height utilities - Responsive */
   .h-screen-minus-header {
     height: calc(100vh - 64px);
   }
 
   .min-h-screen-minus-header {
     min-height: calc(100vh - 64px);
+  }
+  
+  /* Fluid Typography Utilities */
+  .text-fluid-sm {
+    font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  }
+  
+  .text-fluid-base {
+    font-size: clamp(0.875rem, 1.75vw, 1rem);
+  }
+  
+  .text-fluid-lg {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+  }
+  
+  .text-fluid-xl {
+    font-size: clamp(1.125rem, 2.25vw, 1.25rem);
+  }
+  
+  .text-fluid-2xl {
+    font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  }
+  
+  .text-fluid-3xl {
+    font-size: clamp(1.5rem, 3vw, 1.875rem);
   }
 
   /* Prose improvements for markdown */
@@ -579,4 +687,30 @@
 
 .editor-textarea.has-selection {
   cursor: context-menu;
+}
+
+/* Zoom-responsive adjustments */
+@media (min-resolution: 1.25dppx) and (max-resolution: 1.5dppx) {
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (min-resolution: 1.5dppx) and (max-resolution: 2dppx) {
+  body {
+    font-size: 13px;
+  }
+}
+
+@media (min-resolution: 2dppx) {
+  body {
+    font-size: 12px;
+  }
+}
+
+/* Better container queries for nested layouts */
+@container (max-width: 600px) {
+  .editor-content-enhanced .ProseMirror {
+    font-size: 0.95rem;
+  }
 }

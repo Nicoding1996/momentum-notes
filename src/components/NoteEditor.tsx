@@ -402,16 +402,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
       />
 
       {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-4 md:p-6">
         <div
-          className="modal w-full max-w-5xl h-[85vh] flex overflow-hidden"
+          className="modal w-full max-w-7xl h-[92vh] max-h-[1200px] flex overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Two-column layout when AI Chat is visible */}
           <div className={`flex ${isAIChatVisible ? 'flex-row' : 'flex-col'} w-full h-full overflow-hidden`}>
             {/* Docked AI Chat on the left */}
             {isAIChatVisible && (
-              <div className="w-[380px] min-w-[340px] max-w-[420px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+              <div className="w-full sm:w-[360px] md:w-[400px] lg:w-[420px] border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
                 <AIChatPanel
                   key={note.id}
                   note={{ ...note, title, content, tags }}
@@ -426,15 +426,15 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             <div className={`flex flex-col ${isAIChatVisible ? 'flex-1' : 'w-full'} overflow-hidden ${isFocusMode ? 'h-full' : ''}`}>
           {/* Header */}
           {!isFocusMode && (
-          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1">
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-3 sm:gap-4">
+              <div className="flex-1 min-w-0">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Note title"
-                  className="w-full text-xl font-bold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 tracking-tight"
+                  className="w-full text-lg sm:text-xl lg:text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-gray-100 tracking-tight"
                 />
               </div>
               <button
@@ -447,7 +447,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             </div>
             
             {/* Tags Input - Compact */}
-            <div className="mt-2">
+            <div className="mt-2 sm:mt-3">
               <TagInput
                 tags={tags}
                 onChange={setTags}
@@ -459,9 +459,9 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
           {/* AI Toolbar */}
           {!isFocusMode && (
-          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-2.5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
+          <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-gray-50/50 to-transparent dark:from-gray-900/50">
             {aiStatus.available ? (
-              <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
                 {/* AI Chat Button - Primary Action */}
                 <button
                   onClick={() => setIsAIChatVisible(!isAIChatVisible)}
@@ -473,7 +473,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                 </button>
 
-                <div className="flex-1 flex items-center justify-center">
+                <div className="hidden md:flex flex-1 items-center justify-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400 italic">
                     Right-click selected text for AI tools
                   </p>
@@ -574,8 +574,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
           {/* Formatting Toolbar - Always visible */}
           {!isFocusMode && (
-            <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-6 py-2 bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="flex items-center gap-1">
+            <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-2 bg-gray-50/50 dark:bg-gray-900/50">
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap">
                 <button
                   onClick={handleBold}
                   className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
@@ -713,26 +713,26 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           )}
 
           {/* WYSIWYG Editor Content */}
-          <div className={`flex-1 overflow-y-auto px-6 py-3 ${isFocusMode ? 'pt-20' : ''}`}>
-            <EditorContent editor={editor} className="min-h-[500px]" />
+          <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-20' : ''}`}>
+            <EditorContent editor={editor} className="editor-content-enhanced" />
           </div>
 
           {/* Footer */}
           {!isFocusMode && (
-          <div className="flex items-center justify-between border-t border-gray-200/60 dark:border-gray-800/60 px-6 py-3 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-900/50">
-            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 font-medium">
-              <span className="flex items-center gap-2">
+          <div className="flex items-center justify-between border-t border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-3 bg-gradient-to-r from-transparent to-gray-50/50 dark:to-gray-900/50 flex-wrap gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium flex-wrap">
+              <span className="flex items-center gap-1 sm:gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{wordCount}</span>
                 <span>words</span>
               </span>
-              <span className="text-gray-300 dark:text-gray-700">•</span>
-              <span className="flex items-center gap-2">
+              <span className="hidden sm:inline text-gray-300 dark:text-gray-700">•</span>
+              <span className="flex items-center gap-1 sm:gap-2">
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{charCount}</span>
                 <span>characters</span>
               </span>
               {lastSaved && (
                 <>
-                  <span className="text-gray-300 dark:text-gray-700">•</span>
+                  <span className="hidden sm:inline text-gray-300 dark:text-gray-700">•</span>
                   <span className="text-success-600 dark:text-success-400">
                     Saved {lastSaved.toLocaleTimeString()}
                   </span>
@@ -740,7 +740,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {contentHistory.length > 0 && (
                 <button
                   onClick={handleUndo}

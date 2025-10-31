@@ -352,15 +352,15 @@ Begin your response now:`
   return (
     <div className="flex flex-col h-full bg-gradient-to-b from-accent-50/30 to-white dark:from-accent-900/10 dark:to-gray-900">
       {/* Header */}
-      <div className="flex items-center gap-2 p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 flex items-center justify-center flex-shrink-0">
-          <Sparkles className="w-4 h-4 text-gray-900" />
+      <div className="flex items-center gap-2 p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-900" />
         </div>
-        <div className="flex-1">
-          <h3 className="font-display font-semibold text-sm text-gray-900 dark:text-gray-100">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-display font-semibold text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate">
             AI Co-Pilot
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
             Ask me to modify or improve your note
           </p>
         </div>
@@ -368,17 +368,17 @@ Begin your response now:`
         {canUndo && onUndo && (
           <button
             onClick={onUndo}
-            className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1.5"
+            className="px-2 sm:px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-[10px] sm:text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1 sm:gap-1.5 flex-shrink-0"
             title="Undo last change"
           >
-            <Undo2 className="w-3.5 h-3.5" />
-            <span>Undo</span>
+            <Undo2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="hidden sm:inline">Undo</span>
           </button>
         )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 custom-scrollbar">
         {messages.map((message, index) => (
           <div
             key={index}
@@ -387,17 +387,17 @@ Begin your response now:`
             }`}
           >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+              className={`max-w-[90%] sm:max-w-[85%] rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5 ${
                 message.role === 'user'
                   ? 'bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900'
                   : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
               }`}
             >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">
                 {message.content}
               </p>
               <p
-                className={`text-xs mt-1 ${
+                className={`text-[10px] sm:text-xs mt-1 ${
                   message.role === 'user'
                     ? 'text-gray-800'
                     : 'text-gray-500 dark:text-gray-400'
@@ -411,32 +411,32 @@ Begin your response now:`
               
               {/* Action Buttons for Assistant Messages */}
               {message.role === 'assistant' && (
-                <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-gray-200 dark:border-gray-600">
                   {/* Replace Content - Only for REPLACE intent */}
                   {message.isActionable && message.intent === 'REPLACE' && (
                     <button
                       onClick={() => handleReplaceWithToast(stripFillerText(message.content))}
-                      className="flex-1 min-w-[140px] px-3 py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
+                      className="flex-1 min-w-[100px] sm:min-w-[140px] px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 text-[10px] sm:text-xs font-semibold hover:shadow-glow-accent transition-all active:scale-95"
                     >
-                      Replace Content
+                      Replace
                     </button>
                   )}
                   
                   {/* Copy - Always available for ALL assistant messages */}
                   <button
                     onClick={() => handleCopy(stripFillerText(message.content), index)}
-                    className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-[10px] sm:text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 flex items-center gap-1"
                     title="Copy to clipboard"
                   >
                     {copiedIndex === index ? (
                       <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Copied</span>
+                        <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Copied</span>
                       </>
                     ) : (
                       <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy</span>
+                        <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        <span className="hidden sm:inline">Copy</span>
                       </>
                     )}
                   </button>
@@ -444,10 +444,10 @@ Begin your response now:`
                   {/* Add to Note - Always available for ALL assistant messages */}
                   <button
                     onClick={() => handleInsertWithToast(stripFillerText(message.content))}
-                    className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-[10px] sm:text-xs font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-all active:scale-95 whitespace-nowrap"
                     title="Add content to your note"
                   >
-                    Add to Note
+                    Add
                   </button>
                 </div>
               )}
@@ -456,8 +456,8 @@ Begin your response now:`
         ))}
         {isProcessing && (
           <div className="flex justify-start">
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5">
-              <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl sm:rounded-2xl px-3 sm:px-4 py-2 sm:py-2.5">
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 animate-spin" />
             </div>
           </div>
         )}
@@ -466,15 +466,15 @@ Begin your response now:`
 
       {/* Quick Suggestions */}
       {quickSuggestions.length > 0 && (
-        <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick actions:</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="px-3 sm:px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 flex-shrink-0">
+          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2">Quick actions:</p>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             {quickSuggestions.map((suggestion, index) => (
               <button
                 key={index}
                 onClick={() => handleQuickSuggestion(suggestion)}
                 disabled={isProcessing}
-                className="px-3 py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 disabled:opacity-50"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[10px] sm:text-xs text-gray-700 dark:text-gray-300 hover:border-accent-400 hover:text-accent-600 dark:hover:text-accent-400 transition-all active:scale-95 disabled:opacity-50"
               >
                 {suggestion}
               </button>
@@ -486,27 +486,27 @@ Begin your response now:`
       {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+        className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0"
       >
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2">
           <input
             ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your command..."
+            placeholder="Type command..."
             disabled={isProcessing}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400 transition-all disabled:opacity-50 text-sm"
+            className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-accent-500 dark:focus:ring-accent-400 transition-all disabled:opacity-50 text-xs sm:text-sm"
           />
           <button
             type="submit"
             disabled={!input.trim() || isProcessing}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 font-medium transition-all hover:shadow-glow-accent active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+            className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-gradient-to-br from-accent-400 via-accent-500 to-accent-600 text-gray-900 font-medium transition-all hover:shadow-glow-accent active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none flex-shrink-0"
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-2 hidden sm:block">
           Try: "Make this more professional" or "Expand on this idea"
         </p>
       </form>
