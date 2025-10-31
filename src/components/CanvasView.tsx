@@ -32,6 +32,7 @@ import { useChromeAI } from '@/hooks/useChromeAI'
 import { TagDisplay } from '@/components/ui/TagDisplay'
 import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
 import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 
 interface CanvasViewProps {
   notes: Note[]
@@ -440,6 +441,9 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const [isAutoLinking, setIsAutoLinking] = useState(false)
   const { generateText, status } = useChromeAI()
   const [pendingConnection, setPendingConnection] = useState<Connection | null>(null)
+  const [showAutoLinkAlert, setShowAutoLinkAlert] = useState(false)
+  const [autoLinkMessage, setAutoLinkMessage] = useState('')
+  const [autoLinkVariant, setAutoLinkVariant] = useState<'info' | 'success' | 'warning'>('info')
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const { setViewport, getViewport } = useReactFlow()
   const [currentZoom, setCurrentZoom] = useState(100)
@@ -819,7 +823,9 @@ Return ONLY the JSON array, no other text:`
 
       if (!Array.isArray(connections) || connections.length === 0) {
         console.log('No connections suggested by AI')
-        alert('AI found no strong semantic connections between these notes.')
+        setAutoLinkMessage('AI found no strong semantic connections between these notes.')
+        setAutoLinkVariant('info')
+        setShowAutoLinkAlert(true)
         return
       }
 
@@ -871,14 +877,20 @@ Return ONLY the JSON array, no other text:`
       }
 
       if (addedCount > 0) {
-        alert(`✨ Successfully created ${addedCount} connection${addedCount > 1 ? 's' : ''}!`)
+        setAutoLinkMessage(`✨ Successfully created ${addedCount} connection${addedCount > 1 ? 's' : ''}!`)
+        setAutoLinkVariant('success')
+        setShowAutoLinkAlert(true)
       } else {
-        alert('All suggested connections already exist.')
+        setAutoLinkMessage('All suggested connections already exist.')
+        setAutoLinkVariant('info')
+        setShowAutoLinkAlert(true)
       }
     } catch (error) {
       console.error('Auto-link failed:', error)
       const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-      alert(`Failed to auto-link notes: ${errorMsg}\n\nPlease try again.`)
+      setAutoLinkMessage(`Failed to auto-link notes: ${errorMsg}\n\nPlease try again.`)
+      setAutoLinkVariant('warning')
+      setShowAutoLinkAlert(true)
     } finally {
       setIsAutoLinking(false)
     }
@@ -1146,9 +1158,32 @@ Return ONLY the JSON array, no other text:`
             nodeStrokeWidth={3}
             zoomable
             pannable
-            className="!bg-white/95 dark:!bg-gray-900/95 !border-gray-200/60 dark:!border-gray-800/60 !shadow-lg !rounded-xl"
-            nodeColor={() => '#e7e5e4'}
-            maskColor="rgba(0, 0, 0, 0.05)"
+            position="bottom-right"
+            style={{
+              width: 180,
+              height: 120,
+              bottom: 20,
+              right: 20,
+            }}
+            className="!bg-white/98 dark:!bg-gray-900/98 !border-gray-200/80 dark:!border-gray-700/80 !shadow-2xl !rounded-2xl backdrop-blur-sm [&_.react-flow__minimap-description]:!hidden"
+            nodeColor={(node) => {
+              const noteColor = node.data?.color || 'default'
+              const colorMap = {
+                'default': '#e7e5e4',
+                'blue': '#93c5fd',
+                'green': '#86efac',
+                'yellow': '#fde047',
+                'red': '#fca5a5',
+                'purple': '#d8b4fe',
+                'pink': '#fbcfe8',
+                'orange': '#fdba74',
+                'teal': '#5eead4',
+                'indigo': '#a5b4fc',
+              } as const
+              return colorMap[noteColor as keyof typeof colorMap] || '#e7e5e4'
+            }}
+            maskColor="rgba(0, 0, 0, 0.12)"
+            nodeStrokeColor="#9ca3af"
           />
         </ReactFlow>
 
@@ -1210,6 +1245,17 @@ Return ONLY the JSON array, no other text:`
           </div>
         </div>
       )}
+
+      {/* AI Auto-Link Result Modal */}
+      <ConfirmationModal
+        isOpen={showAutoLinkAlert}
+        onClose={() => setShowAutoLinkAlert(false)}
+        onConfirm={() => setShowAutoLinkAlert(false)}
+        title="AI Auto-Link Results"
+        message={autoLinkMessage}
+        type="alert"
+        variant={autoLinkVariant}
+      />
     </div>
   )
 }

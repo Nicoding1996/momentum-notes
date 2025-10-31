@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { X, Download, Upload, Trash2, Database, AlertTriangle, Check, Info, Heart } from 'lucide-react'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import {
   exportAllData,
   downloadAsJSON,
@@ -27,6 +28,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   const [isImporting, setIsImporting] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showReplaceConfirm, setShowReplaceConfirm] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showClearPrompt, setShowClearPrompt] = useState(false)
+  const [showClearAlert, setShowClearAlert] = useState(false)
 
   useEffect(() => {
     loadStats()
@@ -83,23 +88,32 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
     if (!importFile) return
 
     if (importMode === 'replace') {
-      const confirmed = confirm(
-        '⚠️ WARNING: Replace mode will DELETE all your existing data and replace it with the imported data.\n\nThis action cannot be undone.\n\nAre you absolutely sure?'
-      )
-      if (!confirmed) return
+      setShowReplaceConfirm(true)
+      return
     }
+
+    await performImport()
+  }
+
+  const confirmReplaceImport = async () => {
+    setShowReplaceConfirm(false)
+    await performImport()
+  }
+
+  const performImport = async () => {
+    if (!importFile) return
 
     setIsImporting(true)
     setMessage(null)
     try {
       const result = await importData(importFile, importMode)
-      
+
       if (result.success) {
         setMessage({ type: 'success', text: result.message })
         await loadStats()
         setImportFile(null)
         setImportPreviewData(null)
-        
+
         setTimeout(() => {
           window.location.reload()
         }, 2000)
@@ -117,16 +131,22 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   }
 
   const handleClearAll = async () => {
-    const confirmed = confirm(
-      '⚠️ DANGER: This will permanently delete ALL your notes, connections, and tags.\n\nThis action CANNOT be undone.\n\nType "DELETE" in the next prompt to confirm.'
-    )
-    if (!confirmed) return
+    setShowClearConfirm(true)
+  }
 
-    const typed = prompt('Type DELETE to confirm:')
-    if (typed !== 'DELETE') {
-      alert('Cancellation confirmed. Your data is safe.')
+  const confirmClearAll = async () => {
+    setShowClearConfirm(false)
+    setShowClearPrompt(true)
+  }
+
+  const confirmClearPrompt = async (typedText?: string) => {
+    if (typedText !== 'DELETE') {
+      setShowClearPrompt(false)
+      setShowClearAlert(true)
       return
     }
+
+    setShowClearPrompt(false)
 
     try {
       await clearAllData()
@@ -141,6 +161,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         text: `Failed to clear data: ${error instanceof Error ? error.message : 'Unknown error'}`,
       })
     }
+  }
+
+  const confirmClearAlert = () => {
+    setShowClearAlert(false)
   }
 
   return (
@@ -499,6 +523,55 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           )}
         </div>
       </div>
+
+      {/* Replace Import Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showReplaceConfirm}
+        onClose={() => setShowReplaceConfirm(false)}
+        onConfirm={confirmReplaceImport}
+        title="⚠️ Replace All Data"
+        message="WARNING: Replace mode will DELETE all your existing data and replace it with the imported data. This action cannot be undone. Are you absolutely sure?"
+        variant="danger"
+        confirmText="Yes, Replace Everything"
+        cancelText="Cancel"
+      />
+
+      {/* Clear All Data Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={confirmClearAll}
+        title="⚠️ Clear All Data"
+        message="DANGER: This will permanently delete ALL your notes, connections, and tags. This action CANNOT be undone. Type 'DELETE' in the next prompt to confirm."
+        variant="danger"
+        confirmText="Continue"
+        cancelText="Cancel"
+      />
+
+      {/* Clear All Data Prompt Modal */}
+      <ConfirmationModal
+        isOpen={showClearPrompt}
+        onClose={() => setShowClearPrompt(false)}
+        onConfirm={confirmClearPrompt}
+        title="Confirm Deletion"
+        message="Type DELETE to confirm:"
+        type="prompt"
+        placeholder="DELETE"
+        variant="danger"
+        confirmText="Delete Everything"
+        cancelText="Cancel"
+      />
+
+      {/* Clear All Data Alert Modal */}
+      <ConfirmationModal
+        isOpen={showClearAlert}
+        onClose={confirmClearAlert}
+        onConfirm={confirmClearAlert}
+        title="Cancellation Confirmed"
+        message="Your data is safe. No changes were made."
+        type="alert"
+        variant="info"
+      />
     </div>
   )
 }

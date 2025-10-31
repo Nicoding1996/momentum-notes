@@ -13,6 +13,7 @@ import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
 import { useTextSelection } from '@/hooks/useTextSelection'
 import { useToast } from '@/contexts/ToastContext'
 import { TagInput } from '@/components/ui/TagInput'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { AIChatPanel } from '@/components/AIChatPanel'
 import { TextContextMenu } from '@/components/ui/TextContextMenu'
 import { WikilinkExtension } from '@/extensions/WikilinkExtension'
@@ -46,6 +47,10 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
   const [contentHistory, setContentHistory] = useState<string[]>([])
+  const [showUnsavedConfirm, setShowUnsavedConfirm] = useState(false)
+  const [showImageUrlPrompt, setShowImageUrlPrompt] = useState(false)
+  const [showDiagnosticAlert, setShowDiagnosticAlert] = useState(false)
+  const [diagnosticResult, setDiagnosticResult] = useState('')
   const interimTranscriptRef = useRef<string>('')
   const lastInterimLengthRef = useRef<number>(0)
   const autoSaveTimerRef = useRef<NodeJS.Timeout>()
@@ -562,9 +567,14 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
 
   const handleClose = () => {
     if (hasUnsavedChanges) {
-      const confirmed = confirm('You have unsaved changes. Close anyway?')
-      if (!confirmed) return
+      setShowUnsavedConfirm(true)
+      return
     }
+    onClose()
+  }
+
+  const confirmCloseWithUnsaved = () => {
+    setShowUnsavedConfirm(false)
     onClose()
   }
 
@@ -635,10 +645,14 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
   const handleNumberedList = () => editor?.chain().focus().toggleOrderedList().run()
   
   const handleInsertImage = () => {
-    const url = prompt('Enter image URL:')
+    setShowImageUrlPrompt(true)
+  }
+
+  const confirmInsertImage = (url?: string) => {
     if (url && editor) {
       editor.chain().focus().setImage({ src: url }).run()
     }
+    setShowImageUrlPrompt(false)
   }
 
   // AI Chat handlers with undo support
@@ -881,7 +895,8 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   <button
                     onClick={async () => {
                       const result = await runDiagnosticProbe()
-                      alert(`Diagnostic Results:\n\n${result}`)
+                      setDiagnosticResult(result)
+                      setShowDiagnosticAlert(true)
                     }}
                     className="btn-secondary text-xs"
                   >
@@ -1192,6 +1207,40 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
             />
           </div>
         )}
+
+        {/* Custom Modals */}
+        <ConfirmationModal
+          isOpen={showUnsavedConfirm}
+          onClose={() => setShowUnsavedConfirm(false)}
+          onConfirm={confirmCloseWithUnsaved}
+          title="Unsaved Changes"
+          message="You have unsaved changes. Are you sure you want to close without saving?"
+          variant="warning"
+          confirmText="Close Anyway"
+          cancelText="Keep Editing"
+        />
+
+        <ConfirmationModal
+          isOpen={showImageUrlPrompt}
+          onClose={() => setShowImageUrlPrompt(false)}
+          onConfirm={confirmInsertImage}
+          title="Insert Image"
+          message="Enter the URL of the image you want to insert:"
+          type="prompt"
+          placeholder="https://example.com/image.jpg"
+          confirmText="Insert"
+          cancelText="Cancel"
+        />
+
+        <ConfirmationModal
+          isOpen={showDiagnosticAlert}
+          onClose={() => setShowDiagnosticAlert(false)}
+          onConfirm={() => setShowDiagnosticAlert(false)}
+          title="AI Diagnostic Results"
+          message={diagnosticResult}
+          type="alert"
+          variant="info"
+        />
       </div>
     </div>
   )

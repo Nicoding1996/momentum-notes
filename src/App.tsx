@@ -9,6 +9,7 @@ import { CanvasView } from '@/components/CanvasView'
 import { SearchPanel } from '@/components/SearchPanel'
 import { SettingsModal } from '@/components/SettingsModal'
 import { TagDisplay } from '@/components/ui/TagDisplay'
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ToastContainer } from '@/components/ui/Toast'
 
@@ -28,6 +29,8 @@ function App() {
   const [showSearch, setShowSearch] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [viewportCenter, setViewportCenter] = useState<{ x: number; y: number } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
 
   // Seed demo note on first load (dev)
   useEffect(() => {
@@ -91,9 +94,15 @@ function App() {
   }
 
   const deleteNote = async (id: string) => {
-    const ok = confirm('Delete this note? This action cannot be undone.')
-    if (!ok) return
-    await db.notes.delete(id)
+    setNoteToDelete(id)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete) return
+    await db.notes.delete(noteToDelete)
+    setShowDeleteConfirm(false)
+    setNoteToDelete(null)
   }
 
   const openEditor = (note: Note) => {
@@ -405,8 +414,22 @@ function App() {
 
       {/* Toast Notifications */}
       <ToastContainer />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false)
+          setNoteToDelete(null)
+        }}
+        onConfirm={confirmDeleteNote}
+        title="Delete Note"
+        message="Are you sure you want to delete this note? This action cannot be undone."
+        variant="danger"
+        confirmText="Delete"
+      />
     </div>
-    </ToastProvider>
+  </ToastProvider>
   )
 }
 

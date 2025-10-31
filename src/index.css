@@ -680,6 +680,30 @@
   @apply bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl;
 }
 
+/* Hide React Flow attribution/logo in minimap */
+.react-flow__minimap-description {
+  display: none !important;
+}
+
+/* Hide React Flow attribution in bottom-left corner */
+.react-flow__panel.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* Enhanced minimap node styling */
+.react-flow__minimap-node {
+  stroke-width: 2px !important;
+}
+
+/* Better viewport mask visibility */
+.react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.12) !important;
+}
+
 /* Selection styling */
 ::selection {
   @apply bg-primary-200 dark:bg-primary-800 text-primary-900 dark:text-primary-100;
