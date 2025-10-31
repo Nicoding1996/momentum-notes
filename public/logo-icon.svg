@@ -1,0 +1,37 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Synapse icon - Three connected nodes forming a triangle -->
+  <!-- This represents neural connections in a clean, minimal way -->
+  
+  <!-- Connection lines (drawn first, so they appear behind nodes) -->
+  <g opacity="0.6">
+    <line x1="16" y1="8" x2="10" y2="20" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="16" y1="8" x2="22" y2="20" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+    <line x1="10" y1="20" x2="22" y2="20" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Gradient definitions -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60a5fa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#93c5fd;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Three nodes forming a neural network triangle -->
+  <!-- Top node (primary) -->
+  <circle cx="16" cy="8" r="3.5" fill="url(#grad1)"/>
+  <circle cx="16" cy="8" r="2.5" fill="#60a5fa"/>
+  <circle cx="16" cy="8" r="4.5" fill="none" stroke="#3b82f6" stroke-width="0.5" opacity="0.3"/>
+  
+  <!-- Bottom left node -->
+  <circle cx="10" cy="20" r="3" fill="url(#grad2)"/>
+  <circle cx="10" cy="20" r="2" fill="#93c5fd"/>
+  
+  <!-- Bottom right node -->
+  <circle cx="22" cy="20" r="3" fill="url(#grad2)"/>
+  <circle cx="22" cy="20" r="2" fill="#93c5fd"/>
+</svg>

@@ -138,8 +138,10 @@ function App() {
           {/* Logo & Status */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center shadow-sm">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 p-1.5 shadow-sm" style={{
+                boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+              }}>
+                <img src="/logo-icon.svg" alt="Synapse Notes" className="w-full h-full" />
               </div>
               <h1 className="text-xl font-bold text-gradient tracking-tight">
                 Synapse Notes
