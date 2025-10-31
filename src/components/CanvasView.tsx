@@ -34,8 +34,11 @@ import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
 import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { EdgeContextMenu } from '@/components/ui/EdgeContextMenu'
+import { NodeContextMenu } from '@/components/ui/NodeContextMenu'
+import { CanvasContextMenu } from '@/components/ui/CanvasContextMenu'
 import { CanvasFindDialog } from '@/components/ui/CanvasFindDialog'
 import { useToast } from '@/contexts/ToastContext'
+import { useCanvasHistory } from '@/hooks/useCanvasHistory'
 
 interface CanvasViewProps {
   notes: Note[]
@@ -457,13 +460,24 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null)
   
-  // Context menu state
+  // Context menu state - unified for all context menu types
   const [contextMenu, setContextMenu] = useState<{
-    edgeId: string
+    type: 'edge' | 'node' | 'canvas'
+    edgeId?: string
+    nodeId?: string
     x: number
     y: number
     currentType?: string
   } | null>(null)
+  
+  // Clipboard state for copy/paste
+  const [copiedNode, setCopiedNode] = useState<Node | null>(null)
+  
+  // Selected node for keyboard shortcuts
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  
+  // Canvas history for undo/redo
+  const { canUndo, canRedo, undo, redo, pushHistory } = useCanvasHistory()
   
   // Debounced save for performance - save positions after user stops dragging/resizing
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -742,6 +756,11 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     setEdges(initialEdges)
   }, [noteEdges, setEdges, initialEdges])
 
+  // Handle node click for selection (enables keyboard shortcuts)
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedNodeId(node.id)
+  }, [])
+
   // Handle edge selection and right-click
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
     setSelectedEdge(edge.id)
@@ -751,6 +770,7 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const handleEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault()
     setContextMenu({
+      type: 'edge',
       edgeId: edge.id,
       x: event.clientX,
       y: event.clientY,
@@ -758,9 +778,32 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     })
   }, [])
 
+  // Handle node right-click for context menu
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault()
+    setSelectedNodeId(node.id)
+    setContextMenu({
+      type: 'node',
+      nodeId: node.id,
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }, [])
+
+  // Handle canvas background right-click
+  const handlePaneContextMenu = useCallback((event: MouseEvent | React.MouseEvent) => {
+    event.preventDefault()
+    setContextMenu({
+      type: 'canvas',
+      x: event.clientX,
+      y: event.clientY,
+    })
+  }, [])
+
   // Clear selection and context menu
   const handlePaneClick = useCallback(() => {
     setSelectedEdge(null)
+    setSelectedNodeId(null)
     setContextMenu(null)
   }, [])
 
@@ -1030,6 +1073,187 @@ Return ONLY the JSON array, no other text:`
     }
   }, [notes, isAutoLinking, generateText])
 
+  // Copy node handler
+  const handleCopyNode = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId)
+    if (node) {
+      setCopiedNode(node)
+      showToast('Note copied to clipboard', 'success')
+    }
+  }, [nodes, showToast])
+
+  // Paste node handler
+  const handlePasteNode = useCallback(async (position?: { x: number; y: number }) => {
+    if (!copiedNode) return
+
+    try {
+      // Get the original note from database
+      const originalNote = await db.notes.get(copiedNode.id)
+      if (!originalNote) return
+
+      // Create new note with copied content
+      const newNote = {
+        id: nanoid(),
+        title: `${originalNote.title} (Copy)`,
+        content: originalNote.content,
+        tags: originalNote.tags || [],
+        color: originalNote.color,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        x: position ? position.x : (copiedNode.position.x + 50),
+        y: position ? position.y : (copiedNode.position.y + 50),
+        width: copiedNode.style?.width as number || 320,
+        height: copiedNode.style?.height as number || 280,
+      }
+
+      await db.notes.add(newNote)
+      showToast('Note pasted successfully', 'success')
+      
+      // Push to history
+      pushHistory(nodes, edges)
+    } catch (error) {
+      console.error('Failed to paste note:', error)
+      showToast('Failed to paste note', 'error')
+    }
+  }, [copiedNode, nodes, edges, pushHistory, showToast])
+
+  // Delete node handler
+  const handleDeleteNode = useCallback(async (nodeId: string) => {
+    try {
+      await db.notes.delete(nodeId)
+      
+      // Also delete any edges connected to this node
+      const connectedEdges = await db.edges.filter(
+        e => e.source === nodeId || e.target === nodeId
+      ).toArray()
+      
+      if (connectedEdges.length > 0) {
+        await db.edges.bulkDelete(connectedEdges.map(e => e.id))
+      }
+      
+      // No toast notification - user can undo if needed
+      
+      // Push to history
+      pushHistory(nodes.filter(n => n.id !== nodeId), edges.filter(e => e.source !== nodeId && e.target !== nodeId))
+    } catch (error) {
+      console.error('Failed to delete note:', error)
+      showToast('Failed to delete note', 'error')
+    }
+  }, [nodes, edges, pushHistory, showToast])
+
+  // Create note at cursor position
+  const handleCreateNoteAtCursor = useCallback(async (x: number, y: number) => {
+    try {
+      const viewport = getViewport()
+      const rect = reactFlowWrapper.current?.getBoundingClientRect()
+      
+      if (!rect) return
+
+      // Convert screen coordinates to canvas coordinates
+      const canvasX = (x - rect.left - viewport.x) / viewport.zoom
+      const canvasY = (y - rect.top - viewport.y) / viewport.zoom
+
+      const newNote = {
+        id: nanoid(),
+        title: 'New Note',
+        content: '',
+        tags: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        x: canvasX,
+        y: canvasY,
+        width: 320,
+        height: 280,
+      }
+
+      await db.notes.add(newNote)
+      showToast('Note created', 'success')
+      
+      // Push to history
+      pushHistory(nodes, edges)
+    } catch (error) {
+      console.error('Failed to create note:', error)
+      showToast('Failed to create note', 'error')
+    }
+  }, [nodes, edges, pushHistory, getViewport, showToast])
+
+  // Keyboard shortcuts handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey
+      
+      // Ignore if user is typing in an input/textarea OR if any modal/dialog is open
+      const activeElement = document.activeElement
+      const isTyping = activeElement?.tagName === 'INPUT' ||
+                       activeElement?.tagName === 'TEXTAREA' ||
+                       activeElement?.getAttribute('contenteditable') === 'true'
+      
+      // Check if any modal is open by looking for common modal indicators
+      const isModalOpen = document.querySelector('[role="dialog"]') !== null ||
+                         document.querySelector('.modal') !== null ||
+                         // Also check if the active element is inside a note editor
+                         activeElement?.closest('[data-note-editor]') !== null
+      
+      if (isTyping || isModalOpen) {
+        return
+      }
+
+      // Copy: Ctrl/Cmd + C
+      if (isMod && e.key === 'c' && selectedNodeId) {
+        e.preventDefault()
+        handleCopyNode(selectedNodeId)
+      }
+      
+      // Paste: Ctrl/Cmd + V
+      if (isMod && e.key === 'v' && copiedNode) {
+        e.preventDefault()
+        handlePasteNode()
+      }
+      
+      // Delete: Only Delete key (Backspace is too risky when typing)
+      if (e.key === 'Delete' && selectedNodeId) {
+        e.preventDefault()
+        handleDeleteNode(selectedNodeId)
+      }
+      
+      // Undo: Ctrl/Cmd + Z
+      if (isMod && e.key === 'z' && !e.shiftKey && canUndo) {
+        e.preventDefault()
+        const prevState = undo()
+        if (prevState) {
+          setNodes(prevState.nodes)
+          setEdges(prevState.edges)
+        }
+      }
+      
+      // Redo: Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y
+      if ((isMod && e.shiftKey && e.key === 'z') || (isMod && e.key === 'y')) {
+        if (canRedo) {
+          e.preventDefault()
+          const nextState = redo()
+          if (nextState) {
+            setNodes(nextState.nodes)
+            setEdges(nextState.edges)
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedNodeId, copiedNode, canUndo, canRedo, handleCopyNode, handlePasteNode, handleDeleteNode, undo, redo, setNodes, setEdges])
+
+  // Push to history whenever nodes or edges change (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (nodes.length > 0) {
+        pushHistory(nodes, edges)
+      }
+    }, 1000)
+    
+    return () => clearTimeout(timeout)
+  }, [nodes, edges, pushHistory])
+
   // Enhanced pinch-to-zoom handler - supports both touch devices and trackpad
   useEffect(() => {
     const wrapper = reactFlowWrapper.current
@@ -1205,8 +1429,11 @@ Return ONLY the JSON array, no other text:`
           onNodeDragStop={handleNodeDragStop}
           onConnect={handleConnect}
           onEdgesDelete={handleEdgeDelete}
+          onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}
           onEdgeContextMenu={handleEdgeContextMenu}
+          onNodeContextMenu={handleNodeContextMenu}
+          onPaneContextMenu={handlePaneContextMenu}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView
@@ -1352,8 +1579,8 @@ Return ONLY the JSON array, no other text:`
         )}
       </div>
 
-      {/* Edge Context Menu */}
-      {contextMenu && (
+      {/* Context Menus */}
+      {contextMenu?.type === 'edge' && contextMenu.edgeId && (
         <EdgeContextMenu
           edgeId={contextMenu.edgeId}
           x={contextMenu.x}
@@ -1363,6 +1590,41 @@ Return ONLY the JSON array, no other text:`
           onTypeChange={() => {
             // Edges will update automatically via live query
           }}
+        />
+      )}
+      
+      {contextMenu?.type === 'node' && contextMenu.nodeId && (
+        <NodeContextMenu
+          nodeId={contextMenu.nodeId}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onEdit={() => {
+            const note = notes.find(n => n.id === contextMenu.nodeId)
+            if (note) onEditNote(note)
+          }}
+          onDelete={() => {
+            if (contextMenu.nodeId) handleDeleteNode(contextMenu.nodeId)
+          }}
+          onCopy={() => {
+            if (contextMenu.nodeId) handleCopyNode(contextMenu.nodeId)
+          }}
+          currentColor={notes.find(n => n.id === contextMenu.nodeId)?.color as NoteColorId}
+          onColorChange={(color) => {
+            if (contextMenu.nodeId) handleNoteColorChange(contextMenu.nodeId, color)
+          }}
+        />
+      )}
+      
+      {contextMenu?.type === 'canvas' && (
+        <CanvasContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onCreateNote={() => handleCreateNoteAtCursor(contextMenu.x, contextMenu.y)}
+          onPaste={() => handlePasteNode()}
+          onZoomToFit={handleFitView}
+          hasCopiedNote={copiedNode !== null}
         />
       )}
 

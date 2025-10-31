@@ -9,7 +9,6 @@ import { CanvasView } from '@/components/CanvasView'
 import { SearchPanel } from '@/components/SearchPanel'
 import { SettingsModal } from '@/components/SettingsModal'
 import { TagDisplay } from '@/components/ui/TagDisplay'
-import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { ToastContainer } from '@/components/ui/Toast'
 
@@ -29,8 +28,6 @@ function App() {
   const [showSearch, setShowSearch] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [viewportCenter, setViewportCenter] = useState<{ x: number; y: number } | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
 
   // Seed demo note on first load (dev)
   useEffect(() => {
@@ -94,16 +91,23 @@ function App() {
   }
 
   const deleteNote = async (id: string) => {
-    setNoteToDelete(id)
-    setShowDeleteConfirm(true)
+    try {
+      // Delete the note immediately (no confirm modal; undo is available)
+      await db.notes.delete(id)
+
+      // Cascade delete any edges connected to this note
+      const connected = await db.edges
+        .filter(e => e.source === id || e.target === id)
+        .toArray()
+
+      if (connected.length > 0) {
+        await db.edges.bulkDelete(connected.map(e => e.id))
+      }
+    } catch (error) {
+      console.error('Failed to delete note:', (error as Error)?.message || error)
+    }
   }
 
-  const confirmDeleteNote = async () => {
-    if (!noteToDelete) return
-    await db.notes.delete(noteToDelete)
-    setShowDeleteConfirm(false)
-    setNoteToDelete(null)
-  }
 
   const openEditor = (note: Note) => {
     setEditingNote(note)
@@ -417,19 +421,6 @@ function App() {
       {/* Toast Notifications */}
       <ToastContainer />
 
-      {/* Delete Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        onClose={() => {
-          setShowDeleteConfirm(false)
-          setNoteToDelete(null)
-        }}
-        onConfirm={confirmDeleteNote}
-        title="Delete Note"
-        message="Are you sure you want to delete this note? This action cannot be undone."
-        variant="danger"
-        confirmText="Delete"
-      />
     </div>
   </ToastProvider>
   )
