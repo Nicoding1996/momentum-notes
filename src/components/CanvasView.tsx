@@ -432,20 +432,22 @@ const NoteNode = memo(({ data }: { data: any }) => {
         </div>
       </div>
       {data.tags && data.tags.length > 0 && (
-        <div className="mb-4 flex-shrink-0">
+        <div className="mb-4 flex-shrink-0 nodrag">
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
         </div>
       )}
       
       {/* Formatting Toolbar - Only show when editing content and note is large enough */}
       {showToolbar && (
-        <CanvasFormattingToolbar
-          onFormat={handleFormat}
-          onDone={handleDoneEditing}
-        />
+        <div className="nodrag">
+          <CanvasFormattingToolbar
+            onFormat={handleFormat}
+            onDone={handleDoneEditing}
+          />
+        </div>
       )}
       
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden nodrag">
         {isEditingContent ? (
           <textarea
             ref={contentRef}
