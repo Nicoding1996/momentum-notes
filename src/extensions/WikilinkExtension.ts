@@ -1,6 +1,7 @@
 import { Node, mergeAttributes } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Node as PMNode } from '@tiptap/pm/model'
+import { Slice, Fragment } from '@tiptap/pm/model'
 
 export interface WikilinkOptions {
   HTMLAttributes: Record<string, any>
@@ -111,6 +112,65 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
   
   addProseMirrorPlugins() {
     return [
+      // Plugin to handle pasted wikilink text
+      new Plugin({
+        key: new PluginKey('wikilink-paste'),
+        props: {
+          clipboardTextParser: (text, context, _plain, _view) => {
+            const wikilinkRegex = /\[\[([^\]|]+)\|([^\]]+)\]\]/g
+            const matches = [...text.matchAll(wikilinkRegex)]
+            
+            // If no wikilinks found, use default text parsing
+            if (matches.length === 0) {
+              const schema = context.doc.type.schema
+              const paragraph = schema.nodes.paragraph.create(null, schema.text(text))
+              return Slice.maxOpen(Fragment.from(paragraph))
+            }
+            
+            const nodes: PMNode[] = []
+            let lastIndex = 0
+            const schema = context.doc.type.schema
+            
+            matches.forEach(match => {
+              const fullMatch = match[0]
+              const title = match[1]
+              const noteId = match[2]
+              const startIndex = match.index!
+              
+              // Add text before the match
+              if (startIndex > lastIndex) {
+                const textBefore = text.slice(lastIndex, startIndex)
+                if (textBefore) {
+                  nodes.push(schema.text(textBefore))
+                }
+              }
+              
+              // Create wikilink node
+              const wikilinkNode = schema.nodes.wikilink.create({
+                targetNoteId: noteId,
+                targetTitle: title,
+                exists: true,
+              })
+              
+              nodes.push(wikilinkNode)
+              
+              lastIndex = startIndex + fullMatch.length
+            })
+            
+            // Add remaining text after last match
+            if (lastIndex < text.length) {
+              const textAfter = text.slice(lastIndex)
+              if (textAfter) {
+                nodes.push(schema.text(textAfter))
+              }
+            }
+            
+            // Wrap in a paragraph
+            const paragraph = schema.nodes.paragraph.create(null, nodes)
+            return Slice.maxOpen(Fragment.from(paragraph))
+          },
+        },
+      }),
       
       // Plugin for autocomplete triggering
       new Plugin({
