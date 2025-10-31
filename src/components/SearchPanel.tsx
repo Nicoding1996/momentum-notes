@@ -5,6 +5,13 @@ import type { Tag } from '@/types/tag'
 import { db } from '@/lib/db'
 import { TagDisplay } from '@/components/ui/TagDisplay'
 
+// Helper function to strip HTML tags for preview
+function stripHtmlTags(html: string): string {
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 interface SearchPanelProps {
   onClose: () => void
   onSelectNote: (note: Note) => void
@@ -115,7 +122,8 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
     if (query.trim()) {
       const scoredNotes = filtered.map(note => {
         const titleScore = searchMatch(note.title, query)
-        const contentScore = searchMatch(note.content, query)
+        const plainContent = stripHtmlTags(note.content)
+        const contentScore = searchMatch(plainContent, query)
         
         let tagScore = 0
         if (note.tags && note.tags.length > 0) {
@@ -321,7 +329,7 @@ export function SearchPanel({ onClose, onSelectNote }: SearchPanelProps) {
                     )}
                     {note.content && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {highlightText(getExcerpt(note.content, query), query)}
+                        {highlightText(getExcerpt(stripHtmlTags(note.content), query), query)}
                       </p>
                     )}
                   </li>

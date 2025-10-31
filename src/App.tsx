@@ -10,6 +10,13 @@ import { SearchPanel } from '@/components/SearchPanel'
 import { SettingsModal } from '@/components/SettingsModal'
 import { TagDisplay } from '@/components/ui/TagDisplay'
 
+// Helper function to strip HTML tags for preview
+function stripHtmlTags(html: string): string {
+  const tmp = document.createElement('DIV');
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || '';
+}
+
 type ViewMode = 'list' | 'canvas'
 
 function App() {
@@ -325,7 +332,7 @@ function App() {
                         
                         {note.content && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4 leading-relaxed">
-                            {note.content}
+                            {stripHtmlTags(note.content)}
                           </p>
                         )}
                         

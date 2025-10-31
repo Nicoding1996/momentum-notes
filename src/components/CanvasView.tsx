@@ -384,9 +384,10 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges)
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
 
-  // Update nodes only when notes are added or removed, not when content changes
+  // Update nodes when notes change (added, removed, or content updated)
   const prevNoteCountRef = useRef(0)
   const prevNoteIdsRef = useRef(new Set<string>())
+  const prevNoteDataRef = useRef(new Map<string, { title: string; content: string; updatedAt: string }>())
   
   useEffect(() => {
     const currentIds = new Set(notes.map(n => n.id))
@@ -396,10 +397,30 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     const hasNewNotes = notes.some(n => !prevIds.has(n.id))
     const hasRemovedNotes = Array.from(prevIds).some(id => !currentIds.has(id))
     
-    if (hasNewNotes || hasRemovedNotes || prevNoteCountRef.current === 0) {
+    // Check if any note content has changed
+    const hasContentChanges = notes.some(note => {
+      const prevData = prevNoteDataRef.current.get(note.id)
+      if (!prevData) return true
+      return prevData.title !== note.title ||
+             prevData.content !== note.content ||
+             prevData.updatedAt !== note.updatedAt
+    })
+    
+    if (hasNewNotes || hasRemovedNotes || hasContentChanges || prevNoteCountRef.current === 0) {
       setNodes(initialNodes)
       prevNoteCountRef.current = notes.length
       prevNoteIdsRef.current = currentIds
+      
+      // Update tracked data
+      const newDataMap = new Map<string, { title: string; content: string; updatedAt: string }>()
+      notes.forEach(note => {
+        newDataMap.set(note.id, {
+          title: note.title,
+          content: note.content,
+          updatedAt: note.updatedAt
+        })
+      })
+      prevNoteDataRef.current = newDataMap
     }
   }, [notes, initialNodes, setNodes])
 

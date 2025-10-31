@@ -25,6 +25,10 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  // Track the last saved values to properly detect unsaved changes
+  const [lastSavedTitle, setLastSavedTitle] = useState(note.title)
+  const [lastSavedContent, setLastSavedContent] = useState(note.content)
+  const [lastSavedTags, setLastSavedTags] = useState<string[]>(note.tags || [])
   const [aiLoading, setAiLoading] = useState(false)
   const [isAIChatVisible, setIsAIChatVisible] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
@@ -164,12 +168,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     }
   }
 
-  // Track unsaved changes
+  // Track unsaved changes - compare against last saved values, not original note
   useEffect(() => {
-    const changed = title !== note.title || content !== note.content ||
-                   JSON.stringify(tags) !== JSON.stringify(note.tags || [])
+    const changed = title !== lastSavedTitle || content !== lastSavedContent ||
+                   JSON.stringify(tags) !== JSON.stringify(lastSavedTags)
     setHasUnsavedChanges(changed)
-  }, [title, content, tags, note.title, note.content, note.tags])
+  }, [title, content, tags, lastSavedTitle, lastSavedContent, lastSavedTags])
 
   // Auto-save with debounce (2 seconds)
   useEffect(() => {
@@ -219,11 +223,14 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
 
+    // Get content directly from the editor to ensure we have the latest
+    const currentContent = editor?.getHTML() || content
+    
     const now = new Date().toISOString()
     const updatedNote: Note = {
       ...note,
       title: title.trim() || 'Untitled',
-      content: content,
+      content: currentContent,
       updatedAt: now,
     }
     
@@ -235,6 +242,13 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
     try {
       await db.notes.put(updatedNote)
+      
+      // Update the content state to match what we saved
+      setContent(currentContent)
+      // Update last saved values to match current state
+      setLastSavedTitle(updatedNote.title)
+      setLastSavedContent(currentContent)
+      setLastSavedTags(updatedNote.tags || [])
       setHasUnsavedChanges(false)
       setLastSaved(new Date())
     } catch (error) {
