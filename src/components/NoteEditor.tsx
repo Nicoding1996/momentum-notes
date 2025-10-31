@@ -18,6 +18,8 @@ import { TextContextMenu } from '@/components/ui/TextContextMenu'
 import { WikilinkExtension } from '@/extensions/WikilinkExtension'
 import { WikilinkAutocomplete } from '@/components/WikilinkAutocomplete'
 import { BacklinksPanel } from '@/components/BacklinksPanel'
+import { LinkSuggestionPanel } from '@/components/LinkSuggestionPanel'
+import { useAILinkSuggestions } from '@/hooks/useAILinkSuggestions'
 import { findNoteByTitle, scanAndSyncWikilinks } from '@/lib/wikilink-sync'
 
 interface NoteEditorProps {
@@ -55,6 +57,20 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
   
   const { status: aiStatus, expandText, summarizeText, improveWriting, refresh, runDiagnosticProbe } = useChromeAI()
   const { showToast } = useToast()
+  
+  // AI Link Suggestions
+  const {
+    suggestions,
+    isAnalyzing,
+    triggerManually,
+    clearSuggestions,
+  } = useAILinkSuggestions({
+    currentNoteId: note.id,
+    currentContent: content,
+    currentTags: tags,
+    enabled: aiStatus.available,
+    triggerMode: 'auto',
+  })
   
   // Wikilink handlers
   const handleNavigateToNote = async (noteId: string) => {
@@ -351,11 +367,16 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           handleClose()
         }
       }
+      // Ctrl+Shift+L to trigger AI link suggestions
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault()
+        triggerManually()
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [title, content, hasUnsavedChanges, isFocusMode])
+  }, [title, content, hasUnsavedChanges, isFocusMode, triggerManually])
 
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
@@ -544,6 +565,43 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     editor.commands.setContent(previousContent)
     
     showToast('Change undone', 'info', 2000)
+  }
+  
+  // Accept AI link suggestion
+  const handleAcceptSuggestion = async (noteId: string, noteTitle: string) => {
+    if (!editor) return
+    
+    // Insert wikilink node at cursor
+    editor.chain()
+      .focus()
+      .insertContent({
+        type: 'wikilink',
+        attrs: {
+          targetNoteId: noteId,
+          targetTitle: noteTitle,
+          exists: true,
+        },
+      })
+      .insertContent(' ')
+      .run()
+    
+    // Save wikilink to database
+    const wikilinkId = nanoid()
+    await db.wikilinks.add({
+      id: wikilinkId,
+      sourceNoteId: note.id,
+      targetNoteId: noteId,
+      targetTitle: noteTitle,
+      position: editor.state.selection.from,
+      createdAt: new Date().toISOString(),
+      relationshipType: 'references',
+    })
+    
+    // Clear suggestions
+    clearSuggestions()
+    
+    // Show toast
+    showToast(`Linked to ${noteTitle}`, 'success', 2000)
   }
 
   const charCount = content.length
@@ -988,6 +1046,18 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           onImprove={handleAIImprove}
           isLoading={aiLoading}
         />
+        
+        {/* AI Link Suggestions - floating panel */}
+        {!isFocusMode && (suggestions.length > 0 || isAnalyzing) && (
+          <div className="fixed bottom-20 right-8 z-50">
+            <LinkSuggestionPanel
+              suggestions={suggestions}
+              isAnalyzing={isAnalyzing}
+              onAccept={handleAcceptSuggestion}
+              onDismiss={clearSuggestions}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

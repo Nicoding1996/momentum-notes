@@ -1017,3 +1017,66 @@
   padding: 1px 3px;
   border-radius: 3px;
 }
+
+/* ============================================ */
+/* Link Suggestion Panel Styles */
+/* ============================================ */
+
+/* Suggestion Panel */
+.link-suggestion-panel {
+  background: white;
+  border: 1px solid rgb(229 231 235);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  min-width: 320px;
+  max-width: 400px;
+  animation: slideUp 200ms ease-out;
+}
+
+.dark .link-suggestion-panel {
+  background: rgb(31 41 55);
+  border-color: rgb(55 65 81);
+}
+
+.link-suggestion-panel.analyzing {
+  padding: 12px 16px;
+}
+
+/* Header */
+.suggestion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgb(229 231 235);
+}
+
+.dark .suggestion-header {
+  border-bottom-color: rgb(55 65 81);
+}
+
+/* Suggestion Item */
+.suggestion-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: rgb(249 250 251);
+  border: 1px solid rgb(229 231 235);
+  transition: all 150ms;
+}
+
+.dark .suggestion-item {
+  background: rgb(17 24 39);
+  border-color: rgb(55 65 81);
+}
+
+.suggestion-item:hover {
+  background: rgb(239 246 255);
+  border-color: rgb(191 219 254);
+}
+
+.dark .suggestion-item:hover {
+  background: rgb(30 58 138);
+  border-color: rgb(29 78 216);
+}
