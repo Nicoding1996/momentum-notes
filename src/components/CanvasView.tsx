@@ -632,6 +632,7 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
           targetHandle: edge.targetHandle || undefined,
           label: relationshipType?.label || edge.label,
           animated: false,
+          reconnectable: 'target', // Allow dragging endpoints to different handles
           style: {
             stroke: relationshipType?.color || '#a3a3a3',
             strokeWidth: 1.5,
@@ -962,6 +963,35 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
       } catch (error) {
         console.error('Failed to save edge:', error)
         showToast('Failed to create connection', 'error')
+      }
+    },
+    [showToast]
+  )
+
+  // Handle edge reconnection - when user drags an edge endpoint to a different handle
+  const handleReconnect = useCallback(
+    async (oldEdge: Edge, newConnection: Connection) => {
+      try {
+        console.log('Reconnecting edge:', {
+          oldEdge: oldEdge.id,
+          newSource: newConnection.source,
+          newTarget: newConnection.target,
+          newSourceHandle: newConnection.sourceHandle,
+          newTargetHandle: newConnection.targetHandle
+        })
+
+        // Update the edge in the database with new handle information
+        await db.edges.update(oldEdge.id, {
+          source: newConnection.source || oldEdge.source,
+          target: newConnection.target || oldEdge.target,
+          sourceHandle: newConnection.sourceHandle || undefined,
+          targetHandle: newConnection.targetHandle || undefined,
+        })
+
+        showToast('Connection updated!', 'success')
+      } catch (error) {
+        console.error('Failed to reconnect edge:', error)
+        showToast('Failed to update connection', 'error')
       }
     },
     [showToast]
@@ -1479,6 +1509,7 @@ Return ONLY the JSON array, no other text:`
           onEdgesChange={onEdgesChange}
           onNodeDragStop={handleNodeDragStop}
           onConnect={handleConnect}
+          onReconnect={handleReconnect}
           onEdgesDelete={handleEdgeDelete}
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}

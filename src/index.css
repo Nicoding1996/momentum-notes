@@ -656,7 +656,14 @@
 }
 
 .react-flow__pane {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="black" stroke="white" stroke-width="1"/><circle cx="12" cy="12" r="3" fill="white"/></svg>') 12 12, default;
+  cursor: grab;
+  cursor: -webkit-grab;
+}
+
+.react-flow__pane.dragging,
+.react-flow__pane:active {
+  cursor: grabbing;
+  cursor: -webkit-grabbing;
 }
 
 .react-flow__controls {
