@@ -644,7 +644,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
           {/* Formatting Toolbar in Focus Mode */}
           {isFocusMode && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 rounded-xl border border-gray-200/60 dark:border-gray-800/60 shadow-lg z-10 bg-white dark:bg-gray-900 px-4 py-2">
+            <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded-xl border border-gray-200/60 dark:border-gray-800/60 shadow-lg z-10 bg-white dark:bg-gray-900 px-4 py-2">
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleBold}
@@ -713,7 +713,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           )}
 
           {/* WYSIWYG Editor Content */}
-          <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-20' : ''}`}>
+          <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
             <EditorContent editor={editor} className="editor-content-enhanced" />
           </div>
 
@@ -779,14 +779,14 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
         {/* Focus Mode UI */}
         {isFocusMode && (
           <>
-            <div className="absolute top-4 right-4 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none">
+            <div className="absolute top-6 right-6 bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 px-4 py-2 rounded-full text-xs font-medium opacity-50 hover:opacity-100 transition-opacity pointer-events-none z-20">
               Press ESC to exit Focus Mode
             </div>
             {contentHistory.length > 0 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
                 <button
                   onClick={handleUndo}
-                  className="btn bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 hover:bg-gray-900 dark:hover:bg-white text-sm"
+                  className="btn bg-gray-900/80 dark:bg-gray-100/80 text-white dark:text-gray-900 hover:bg-gray-900 dark:hover:bg-white text-sm shadow-lg"
                 >
                   Undo
                 </button>
