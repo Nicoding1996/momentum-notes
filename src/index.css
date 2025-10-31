@@ -656,11 +656,7 @@
 }
 
 .react-flow__pane {
-  cursor: grab;
-}
-
-.react-flow__pane.dragging {
-  cursor: grabbing;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="black" stroke="white" stroke-width="1"/><circle cx="12" cy="12" r="3" fill="white"/></svg>') 12 12, default;
 }
 
 .react-flow__controls {
@@ -841,6 +837,17 @@
 
 .editor-textarea.has-selection {
   cursor: context-menu;
+}
+
+/* Custom text cursor for note editing - Microsoft Word style capital I */
+textarea:focus,
+.editor-textarea:focus {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 20 24"><rect x="9" y="2" width="2" height="20" fill="black"/><rect x="6" y="20" width="8" height="2" fill="black"/></svg>') 10 12, text;
+}
+
+/* Black text cursor for canvas elements */
+.note-block:hover {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="24" viewBox="0 0 20 24"><rect x="9" y="2" width="2" height="20" fill="black"/><rect x="6" y="20" width="8" height="2" fill="black"/></svg>') 10 12, text;
 }
 
 /* Markdown content rendering in chat */
