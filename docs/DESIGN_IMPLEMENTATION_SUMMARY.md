@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document summarizes the comprehensive design improvements made to Momentum Notes based on the artistic, minimalist design philosophy. The goal was to transform the application from functional to beautiful, avoiding the "generic AI app" look.
+This document summarizes the comprehensive design improvements made to Synapse Notes based on the artistic, minimalist design philosophy. The goal was to transform the application from functional to beautiful, avoiding the "generic AI app" look.
 
 ---
 

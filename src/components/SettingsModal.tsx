@@ -451,13 +451,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
           {activeTab === 'about' && (
             <div className="space-y-8">
               <section>
-                <h3 className="text-lg font-semibold mb-5 text-gray-900 dark:text-gray-100 tracking-tight">About Momentum Notes</h3>
+                <h3 className="text-lg font-semibold mb-5 text-gray-900 dark:text-gray-100 tracking-tight">About Synapse Notes</h3>
                 <div className="space-y-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                   <div className="card p-5">
                     <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Version 1.0.0</div>
                     <p>
-                      Momentum Notes is an innovative Progressive Web App that leverages Chrome's built-in
-                      Gemini Nano AI to provide a seamless, offline-first note-taking experience.
+                      Synapse Notes is an innovative Progressive Web App that leverages Chrome's built-in
+                      Gemini Nano AI to provide a seamless, offline-first note-taking experience with powerful knowledge graph capabilities.
                     </p>
                   </div>
 
@@ -499,10 +499,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               <section className="card p-6">
                 <h4 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">Open Source</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-                  Momentum Notes is open source and available on GitHub. Contributions welcome!
+                  Synapse Notes is open source and available on GitHub. Contributions welcome!
                 </p>
                 <a
-                  href="https://github.com/Nicoding1996/momentum-notes"
+                  href="https://github.com/Nicoding1996/synapse-notes"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline text-sm font-medium"
@@ -513,7 +513,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 
               <section className="text-center pt-6 border-t border-gray-200/60 dark:border-gray-800/60">
                 <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center justify-center gap-2">
-                  Built with <Heart className="w-4 h-4 text-red-500 fill-current" /> by the Momentum team
+                  Built with <Heart className="w-4 h-4 text-red-500 fill-current" /> by the Synapse team
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                   Powered by Chrome Built-in AI • 100% Offline • Privacy First

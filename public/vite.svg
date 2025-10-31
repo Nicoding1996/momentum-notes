@@ -1,10 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Synapse Notes logo for Vite -->
+  <rect width="128" height="128" rx="24" fill="#1e293b"/>
+  
+  <!-- Neural Network Pattern -->
+  <!-- Main central node -->
+  <circle cx="64" cy="64" r="8" fill="#60a5fa" opacity="0.9"/>
+  <circle cx="64" cy="64" r="6" fill="#3b82f6"/>
+  
+  <!-- Top nodes -->
+  <circle cx="64" cy="35" r="5" fill="#818cf8" opacity="0.8"/>
+  <circle cx="45" cy="45" r="4" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="83" cy="45" r="4" fill="#c084fc" opacity="0.7"/>
+  
+  <!-- Bottom nodes -->
+  <circle cx="64" cy="93" r="5" fill="#818cf8" opacity="0.8"/>
+  <circle cx="45" cy="83" r="4" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="83" cy="83" r="4" fill="#c084fc" opacity="0.7"/>
+  
+  <!-- Side nodes -->
+  <circle cx="35" cy="64" r="4.5" fill="#60a5fa" opacity="0.75"/>
+  <circle cx="93" cy="64" r="4.5" fill="#60a5fa" opacity="0.75"/>
+  
+  <!-- Connection lines with gradient -->
   <defs>
-    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#d946ef;stop-opacity:1" />
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#818cf8;stop-opacity:0.3" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:0.3" />
     </linearGradient>
   </defs>
-  <rect width="32" height="32" rx="6" fill="url(#gradient)"/>
-  <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="20" font-weight="bold" fill="white">M</text>
+  
+  <!-- Central to top -->
+  <line x1="64" y1="64" x2="64" y2="35" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="45" y2="45" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="83" y2="45" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Central to bottom -->
+  <line x1="64" y1="64" x2="64" y2="93" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="45" y2="83" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="83" y2="83" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Central to sides -->
+  <line x1="64" y1="64" x2="35" y2="64" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="64" y1="64" x2="93" y2="64" stroke="url(#grad1)" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Glow effect on central node -->
+  <circle cx="64" cy="64" r="10" fill="none" stroke="#60a5fa" stroke-width="1" opacity="0.3"/>
+  <circle cx="64" cy="64" r="13" fill="none" stroke="#3b82f6" stroke-width="0.5" opacity="0.2"/>
 </svg>

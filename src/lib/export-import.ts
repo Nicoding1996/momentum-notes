@@ -2,7 +2,7 @@ import { db } from './db'
 import type { ExportData, ImportResult, ImportPreview, ImportMode } from '@/types/export'
 
 const CURRENT_VERSION = '1.0.0'
-const APP_NAME = 'momentum-notes'
+const APP_NAME = 'synapse-notes'
 
 /**
  * Export all data from IndexedDB
@@ -47,7 +47,7 @@ export function downloadAsJSON(data: ExportData, filename?: string): void {
     
     const link = document.createElement('a')
     link.href = url
-    link.download = filename || `momentum-notes-backup-${new Date().toISOString().split('T')[0]}.json`
+    link.download = filename || `synapse-notes-backup-${new Date().toISOString().split('T')[0]}.json`
     
     document.body.appendChild(link)
     link.click()

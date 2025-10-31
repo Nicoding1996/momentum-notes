@@ -1,7 +1,7 @@
 {
-  "name": "momentum-notes",
+  "name": "synapse-notes",
   "version": "1.0.0",
-  "description": "The Frictionless AI Notebook. Capture Your Cognitive Momentum.",
+  "description": "The AI-Powered Knowledge Network. Connect Your Ideas.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -76,10 +76,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Nicoding1996/momentum-notes.git"
+    "url": "https://github.com/Nicoding1996/synapse-notes.git"
   },
   "bugs": {
-    "url": "https://github.com/Nicoding1996/momentum-notes/issues"
+    "url": "https://github.com/Nicoding1996/synapse-notes/issues"
   },
-  "homepage": "https://github.com/Nicoding1996/momentum-notes#readme"
+  "homepage": "https://github.com/Nicoding1996/synapse-notes#readme"
 }

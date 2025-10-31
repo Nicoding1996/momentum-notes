@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This document provides a comprehensive roadmap for implementing three major linking improvements in Momentum Notes:
+This document provides a comprehensive roadmap for implementing three major linking improvements in Synapse Notes:
 
 1. **Wikilink Syntax** (`[[Note Title]]`) - Inline text-based linking
 2. **Backlinks Panel** - Bidirectional link awareness

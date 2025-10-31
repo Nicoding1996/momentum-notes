@@ -1,7 +1,7 @@
 # Backlinks Panel Implementation Plan
 
 ## Overview
-This document outlines the design for implementing a Backlinks Panel in Momentum Notes, which displays all notes that link TO the currently open note. This creates bidirectional awareness and enables users to discover connections they may have forgotten about.
+This document outlines the design for implementing a Backlinks Panel in Synapse Notes, which displays all notes that link TO the currently open note. This creates bidirectional awareness and enables users to discover connections they may have forgotten about.
 
 ## Purpose & Benefits
 

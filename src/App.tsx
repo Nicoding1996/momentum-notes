@@ -142,7 +142,7 @@ function App() {
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <h1 className="text-xl font-bold text-gradient tracking-tight">
-                Momentum Notes
+                Synapse Notes
               </h1>
             </div>
             <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-800/50">
@@ -239,7 +239,7 @@ function App() {
               </div>
               
               <h2 className="text-3xl font-bold mb-4 text-gray-900 dark:text-gray-100 tracking-tight">
-                Welcome to Momentum Notes
+                Welcome to Synapse Notes
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
                 Your intelligent note-taking companion. Create, organize, and connect your thoughts with AI-powered insights on an infinite canvas.

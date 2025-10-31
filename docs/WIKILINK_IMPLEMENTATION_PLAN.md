@@ -1,7 +1,7 @@
 # Wikilink Implementation Plan
 
 ## Overview
-This document outlines the architectural design for implementing inline wikilink functionality (`[[Note Title]]` syntax) in Momentum Notes, enabling users to create note connections directly within the editor while writing.
+This document outlines the architectural design for implementing inline wikilink functionality (`[[Note Title]]` syntax) in Synapse Notes, enabling users to create note connections directly within the editor while writing.
 
 ## Current Architecture Analysis
 

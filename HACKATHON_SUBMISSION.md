@@ -1,8 +1,8 @@
-# Momentum Notes - Chrome Built-in AI Challenge 2025
+# Synapse Notes - Chrome Built-in AI Challenge 2025
 
 ## Project Overview
 
-**Momentum Notes** is an offline-first, AI-powered note-taking PWA that leverages Chrome's Built-in AI APIs to provide intelligent writing assistance without requiring internet connectivity or cloud services.
+**Synapse Notes** is an offline-first, AI-powered note-taking PWA that leverages Chrome's Built-in AI APIs to provide intelligent writing assistance without requiring internet connectivity or cloud services.
 
 ## APIs Used
 
@@ -38,7 +38,7 @@ Current note-taking apps suffer from three major problems:
 2. **AI Paywalls**: Advanced AI features locked behind subscriptions
 3. **Cluttered Interfaces**: Linear organization doesn't match how we think
 
-Momentum Notes solves these by:
+Synapse Notes solves these by:
 - **100% Offline**: All AI processing happens on-device using Gemini Nano
 - **Zero Cost**: No API fees, no subscriptions, completely free
 - **Visual Canvas**: Organize notes spatially like sticky notes on a wall
@@ -172,8 +172,8 @@ The demo video should showcase:
 
 ### For Judges
 ```bash
-git clone https://github.com/Nicoding1996/momentum-notes.git
-cd momentum-notes
+git clone https://github.com/Nicoding1996/synapse-notes.git
+cd synapse-notes
 npm install
 npm run dev
 ```
@@ -213,7 +213,7 @@ If native Writer/Summarizer APIs are unavailable, the app automatically uses the
 
 ## Project Links
 
-- **Repository**: [https://github.com/Nicoding1996/momentum-notes](https://github.com/Nicoding1996/momentum-notes)
+- **Repository**: [https://github.com/Nicoding1996/synapse-notes](https://github.com/Nicoding1996/synapse-notes)
 - **Demo Video**: [To be added]
 - **Live Demo**: [To be deployed]
 

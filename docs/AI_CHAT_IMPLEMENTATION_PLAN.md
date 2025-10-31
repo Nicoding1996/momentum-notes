@@ -1,8 +1,8 @@
-# AI Chat Implementation Plan: The Momentum Notes Approach
+# AI Chat Implementation Plan: The Synapse Notes Approach
 
 ## Overview
 
-This document outlines the implementation plan for a contextual, on-demand AI chat feature in Momentum Notes. This approach moves away from a traditional, persistent chat sidebar and instead integrates AI assistance directly into the user's workflow, making it more intuitive, powerful, and aligned with our minimalist design goals.
+This document outlines the implementation plan for a contextual, on-demand AI chat feature in Synapse Notes. This approach moves away from a traditional, persistent chat sidebar and instead integrates AI assistance directly into the user's workflow, making it more intuitive, powerful, and aligned with our minimalist design goals.
 
 The core principle is to provide AI assistance exactly when and where the user needs it, with the relevant context already understood.
 

@@ -1,4 +1,4 @@
-# Momentum Notes - Implementation Summary
+# Synapse Notes - Implementation Summary
 
 ## 🎉 What's Been Built
 

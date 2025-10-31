@@ -67,7 +67,7 @@ export async function seedIfEmpty() {
     const now = new Date().toISOString();
     await db.notes.add({
       id,
-      title: 'Welcome to Momentum Notes',
+      title: 'Welcome to Synapse Notes',
       content: 'This is your first note. Edit me!',
       createdAt: now,
       updatedAt: now,

@@ -1,0 +1,59 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="256" fill="#1e293b"/>
+  
+  <!-- Neural Network Pattern -->
+  <!-- Main central node -->
+  <circle cx="256" cy="256" r="32" fill="#60a5fa" opacity="0.9"/>
+  <circle cx="256" cy="256" r="24" fill="#3b82f6"/>
+  
+  <!-- Top nodes -->
+  <circle cx="256" cy="140" r="20" fill="#818cf8" opacity="0.8"/>
+  <circle cx="180" cy="180" r="16" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="332" cy="180" r="16" fill="#c084fc" opacity="0.7"/>
+  
+  <!-- Bottom nodes -->
+  <circle cx="256" cy="372" r="20" fill="#818cf8" opacity="0.8"/>
+  <circle cx="180" cy="332" r="16" fill="#a78bfa" opacity="0.7"/>
+  <circle cx="332" cy="332" r="16" fill="#c084fc" opacity="0.7"/>
+  
+  <!-- Side nodes -->
+  <circle cx="140" cy="256" r="18" fill="#60a5fa" opacity="0.75"/>
+  <circle cx="372" cy="256" r="18" fill="#60a5fa" opacity="0.75"/>
+  
+  <!-- Connection lines with gradient -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.6" />
+      <stop offset="100%" style="stop-color:#818cf8;stop-opacity:0.3" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#60a5fa;stop-opacity:0.5" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Central to top -->
+  <line x1="256" y1="256" x2="256" y2="140" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="180" y2="180" stroke="url(#grad2)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="332" y2="180" stroke="url(#grad2)" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <!-- Central to bottom -->
+  <line x1="256" y1="256" x2="256" y2="372" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="180" y2="332" stroke="url(#grad2)" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="332" y2="332" stroke="url(#grad2)" stroke-width="2.5" stroke-linecap="round"/>
+  
+  <!-- Central to sides -->
+  <line x1="256" y1="256" x2="140" y2="256" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round"/>
+  <line x1="256" y1="256" x2="372" y2="256" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Cross connections for network effect -->
+  <line x1="180" y1="180" x2="140" y2="256" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="332" y1="180" x2="372" y2="256" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="180" y1="332" x2="140" y2="256" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="332" y1="332" x2="372" y2="256" stroke="url(#grad2)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  
+  <!-- Glow effect on central node -->
+  <circle cx="256" cy="256" r="40" fill="none" stroke="#60a5fa" stroke-width="2" opacity="0.3"/>
+  <circle cx="256" cy="256" r="50" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.2"/>
+</svg>

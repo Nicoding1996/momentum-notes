@@ -2,7 +2,7 @@
 
 ## 📋 Overview
 
-This document outlines the design and implementation plan for the Export/Import feature in Momentum Notes. While not the most "wow" feature for a hackathon demo, it's essential for data portability and user trust.
+This document outlines the design and implementation plan for the Export/Import feature in Synapse Notes. While not the most "wow" feature for a hackathon demo, it's essential for data portability and user trust.
 
 ## 🎯 Goals
 
@@ -19,7 +19,7 @@ This document outlines the design and implementation plan for the Export/Import 
 {
   "version": "1.0.0",
   "exported_at": "2024-10-29T20:30:00.000Z",
-  "app": "momentum-notes",
+  "app": "synapse-notes",
   "data": {
     "notes": [
       {
@@ -206,7 +206,7 @@ function previewImport(data: ExportData): ImportPreview
 2. Settings modal opens to "Data" tab
 3. User sees current data statistics (X notes, Y connections, Z tags)
 4. User clicks "Export All Data"
-5. JSON file downloads with filename: `momentum-notes-backup-YYYY-MM-DD.json`
+5. JSON file downloads with filename: `synapse-notes-backup-YYYY-MM-DD.json`
 6. Success message shows: "✓ Data exported successfully"
 
 ### Import Flow

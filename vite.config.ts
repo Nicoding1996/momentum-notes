@@ -11,8 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['vite.svg', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-icon-512x512.png'],
       manifest: {
-        name: 'Momentum Notes',
-        short_name: 'Momentum',
+        name: 'Synapse Notes',
+        short_name: 'Synapse',
         description: 'The Frictionless AI Notebook. Capture Your Cognitive Momentum.',
         theme_color: '#1a1a1a',
         background_color: '#ffffff',
