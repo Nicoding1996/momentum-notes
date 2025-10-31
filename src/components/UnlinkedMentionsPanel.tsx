@@ -174,7 +174,7 @@ function UnlinkedMentionItem({
       </div>
       
       {/* Context Snippet */}
-      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed overflow-hidden break-words">
         {highlightMention(mention.contextSnippet, currentNoteTitle)}
       </p>
       
