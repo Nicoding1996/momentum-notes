@@ -2,6 +2,8 @@ export interface NoteEdge {
   id: string;
   source: string; // Source note ID
   target: string; // Target note ID
+  sourceHandle?: string; // Specific handle on source node (e.g., "top-source", "bottom-source")
+  targetHandle?: string; // Specific handle on target node (e.g., "left-target", "right-target")
   createdAt: string; // ISO date
   label?: string; // Optional label for the connection
   relationshipType?: string; // Type of relationship (e.g., "related-to", "depends-on")

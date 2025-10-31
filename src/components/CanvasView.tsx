@@ -310,34 +310,73 @@ const NoteNode = memo(({ data }: { data: any }) => {
           }
         }}
       >
-      {/* Connection handles - Only show on hover for reduced clutter */}
+      {/* Connection handles - Using single handles that work as both source and target */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
+        isConnectable={true}
         className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
         style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="top"
+        isConnectable={true}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)', pointerEvents: 'none' }}
+      />
+      
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
+        isConnectable={true}
         className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
         style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="bottom"
+        isConnectable={true}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)', pointerEvents: 'none' }}
+      />
+      
       <Handle
         type="source"
         position={Position.Left}
         id="left"
+        isConnectable={true}
         className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
         style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
       <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        isConnectable={true}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)', pointerEvents: 'none' }}
+      />
+      
+      <Handle
         type="source"
         position={Position.Right}
         id="right"
+        isConnectable={true}
         className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
         style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
+      />
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="right"
+        isConnectable={true}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)', pointerEvents: 'none' }}
       />
       
       <div className="flex items-start justify-between mb-4 flex-shrink-0">
@@ -589,6 +628,8 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
           id: edge.id,
           source: edge.source,
           target: edge.target,
+          sourceHandle: edge.sourceHandle || undefined,
+          targetHandle: edge.targetHandle || undefined,
           label: relationshipType?.label || edge.label,
           animated: false,
           style: {
@@ -897,10 +938,20 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
       try {
         const relType = RELATIONSHIP_TYPES.RELATED_TO
         
+        // Log the connection details to debug
+        console.log('Connection details:', {
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle,
+          targetHandle: connection.targetHandle
+        })
+        
         await db.edges.add({
           id: edgeId,
           source: connection.source,
           target: connection.target,
+          sourceHandle: connection.sourceHandle || undefined,
+          targetHandle: connection.targetHandle || undefined,
           createdAt: now,
           relationshipType: 'related-to',
           label: relType.label,
@@ -1442,7 +1493,7 @@ Return ONLY the JSON array, no other text:`
           maxZoom={1}
           deleteKeyCode="Delete"
           selectNodesOnDrag={false}
-          connectionMode={ConnectionMode.Loose}
+          connectionMode={ConnectionMode.Strict}
           panOnScroll={true}
           panOnScrollSpeed={0.5}
           zoomOnScroll={false}
