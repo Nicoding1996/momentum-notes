@@ -208,7 +208,3 @@ Potential improvements for later versions:
 - [`KNOWLEDGE_GRAPH_PLAN.md`](KNOWLEDGE_GRAPH_PLAN.md) - Implementation plan
 - [`src/types/edge.ts`](src/types/edge.ts) - Type definitions
 - [`src/components/CanvasView.tsx`](src/components/CanvasView.tsx) - Implementation
-
----
-
-Built with ❤️ to enhance your knowledge management workflow

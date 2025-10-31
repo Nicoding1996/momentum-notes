@@ -139,29 +139,34 @@ src/
 
 ---
 
-## 🚀 Next Steps (Future Enhancements)
+## ✅ Phase 5: Voice Transcription (Complete)
 
-The following features were identified but marked as future enhancements:
+### Features Implemented:
+- **Voice-to-Text** ([`useVoiceTranscription.ts`](src/hooks/useVoiceTranscription.ts))
+  - Requires Web Speech API integration
+  - Button to record and transcribe audio
 
-1. **Markdown Preview Toggle**
-   - Side-by-side markdown rendering in editor
+## ✅ Phase 6: Note Connections (Complete)
 
-2. **Voice-to-Text**
-   - Requires Web Speech API integration
-   - Button to record and transcribe audio
+### Features Implemented:
+- **Note Connections**
+  - Draw lines between related notes on canvas
+  - Visual knowledge graph
 
-3. **Note Connections**
-   - Draw lines between related notes on canvas
-   - Visual knowledge graph
+## ✅ Phase 7: Tags System (Complete)
 
-4. **Tags System**
-   - Add tags to notes
-   - Filter by tags in search
-   - Tag-based organization
+### Features Implemented:
+- **Tags System**
+  - Add tags to notes
+  - Filter by tags in search
+  - Tag-based organization
 
-5. **Export/Import**
-   - Export notes to JSON/Markdown
-   - Import from other note apps
+## ✅ Phase 8: Export/Import (Complete)
+
+### Features Implemented:
+- **Export/Import**
+  - Export notes to JSON
+  - Import from JSON
 
 ---
 

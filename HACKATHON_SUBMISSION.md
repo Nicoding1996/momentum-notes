@@ -157,7 +157,7 @@ We demonstrate **4 out of 6** Chrome Built-in AI APIs:
 
 ## Demo Video Highlights
 
-The demo video should showcase:
+The demo video showcases:
 1. **Creating Notes**: Quick note creation with title
 2. **Note Editor**: Auto-save, word count, keyboard shortcuts
 3. **Canvas View**: Drag-and-drop organization, zoom, minimap
@@ -178,7 +178,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` in **Chrome 128+** (Dev or Canary recommended for full API support)
+Open `http://localhost:5173` in **Chrome 128+** (Dev or Canary recommended for full API support)
 
 ### Chrome Setup Required
 1. Enable flags at `chrome://flags`:

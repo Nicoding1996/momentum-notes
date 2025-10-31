@@ -185,7 +185,7 @@ npm run type-check
 
 ## 🎯 Roadmap
 
-### Phase 1: MVP (Completed)
+### Implemented Features
 - [x] Project setup and architecture
 - [x] Core note-taking functionality (create, edit, auto-save)
 - [x] Offline-first data storage (IndexedDB)
@@ -197,29 +197,16 @@ npm run type-check
 - [x] Advanced search with fuzzy matching
 - [x] Tag system for organization
 
-### Phase 2: Enhanced Features (In Progress)
+### Future Enhancements
 - [ ] Image OCR integration
 - [ ] Translation API integration
 - [ ] Proofreader API integration
 - [ ] Template system
 - [ ] Enhanced knowledge graph visualization
 - [ ] Import from other note apps (Evernote, Notion, etc.)
-
-### Phase 3: Integration (Future)
-- [ ] Google Docs OAuth integration
-- [ ] One-way export to Google Docs
-- [ ] Conflict resolution UI
-- [ ] Background sync queue
-- [ ] Optional encryption layer
-- [ ] Performance optimization for 10k+ notes
-
-### Phase 4: Advanced (Future)
-- [ ] Two-way Google Docs sync
+- [ ] Google Docs integration (OAuth, one-way export)
 - [ ] Real-time collaboration (WebRTC)
-- [ ] Template marketplace
-- [ ] Plugin system
 - [ ] Mobile app (Capacitor)
-- [ ] Online AI features (optional)
 
 ---
 

@@ -89,16 +89,6 @@ The AI Auto-Link analyzes your notes' **semantic meaning** (not just keywords!) 
 - **Delete**: Press DELETE key while line is selected
 - **View**: Connections persist across sessions
 
-## 🏆 Hackathon Value
-
-This feature is perfect for demos because it:
-
-1. **Visual Impact**: Immediately impressive on screen
-2. **AI Integration**: Shows advanced use of Chrome Built-in AI
-3. **Practical Value**: Solves a real problem in note-taking
-4. **Unique**: Not many note apps have visual knowledge graphs
-5. **Interactive**: Fun to play with during demos
-
 ## 📊 Best Practices
 
 ### Do:
@@ -116,14 +106,12 @@ This feature is perfect for demos because it:
 
 ## 🔮 Future Enhancements
 
-Potential improvements for later:
-- **Bi-directional connections** with different relationship types
-- **Connection strength** visualization (thick vs thin lines)
-- **Hierarchical layouts** for parent-child relationships
-- **Color-coded connections** by category
-- **Export as mind map** images
-- **Collaborative connections** for team notes
+- Bi-directional connections with different relationship types
+- Connection strength visualization
+- Hierarchical layouts
+- Color-coded connections by category
+- Export as mind map images
 
 ---
 
-Built with ❤️ for the hackathon demo
+Built with ❤️
