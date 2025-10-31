@@ -105,7 +105,7 @@ export function useAILinkSuggestions({
     // Set new timer
     debounceTimer.current = setTimeout(() => {
       analyzeSuggestions()
-    }, 3000) // 3 second pause
+    }, 10000) // 10 second pause
     
     return () => {
       if (debounceTimer.current) {
