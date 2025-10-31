@@ -61,7 +61,7 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
           'class': `wikilink ${exists ? 'wikilink-exists' : 'wikilink-broken'}`,
         }
       ),
-      `[[${node.attrs.targetTitle}]]`,
+      node.attrs.targetTitle,
     ]
   },
   
@@ -75,7 +75,7 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
       dom.setAttribute('data-note-id', node.attrs.targetNoteId || '')
       dom.setAttribute('data-title', node.attrs.targetTitle || '')
       dom.setAttribute('contenteditable', 'false')
-      dom.textContent = `[[${node.attrs.targetTitle}]]`
+      dom.textContent = node.attrs.targetTitle
       dom.style.cursor = 'pointer'
       dom.style.userSelect = 'none'
       
@@ -110,8 +110,6 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
   },
   
   addProseMirrorPlugins() {
-    const editor = this.editor
-    
     return [
       
       // Plugin for autocomplete triggering
@@ -131,8 +129,8 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
               $from.parentOffset
             )
             
-            // Check if user is typing inside [[...
-            const wikilinkPattern = /\[\[([^\]]*?)$/
+            // Check if user is typing after @
+            const wikilinkPattern = /@([^\s]*?)$/
             const match = textBefore.match(wikilinkPattern)
             
             if (match) {
@@ -143,34 +141,6 @@ export const WikilinkExtension = Node.create<WikilinkOptions>({
               this.options.onTriggerAutocomplete(query, pos)
               
               return { active: true, query, pos }
-            }
-            
-            // Check if user completed a wikilink with ]]
-            if (textBefore.endsWith(']]')) {
-              const fullPattern = /\[\[([^\]]+)\]\]$/
-              const fullMatch = textBefore.match(fullPattern)
-              
-              if (fullMatch) {
-                const title = fullMatch[1].trim()
-                
-                // Validate and create wikilink node
-                this.options.validateTarget(title).then(noteId => {
-                  const from = $from.pos - fullMatch[0].length
-                  const to = $from.pos
-                  
-                  editor.chain()
-                    .deleteRange({ from, to })
-                    .insertContentAt(from, {
-                      type: 'wikilink',
-                      attrs: {
-                        targetNoteId: noteId,
-                        targetTitle: title,
-                        exists: noteId !== null,
-                      },
-                    })
-                    .run()
-                })
-              }
             }
             
             return { active: false, query: '', pos: 0 }

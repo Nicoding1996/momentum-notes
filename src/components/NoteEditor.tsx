@@ -106,7 +106,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
   const handleAutocompleteSelect = async (selectedNote: Note) => {
     if (!editor) return
     
-    // Find the [[ pattern and replace it with wikilink
+    // Find the @ pattern and replace it with wikilink
     const { state } = editor
     const { selection } = state
     const { $from } = selection
@@ -117,13 +117,13 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
       $from.parentOffset
     )
     
-    const match = textBefore.match(/\[\[([^\]]*?)$/)
+    const match = textBefore.match(/@([^\s]*?)$/)
     if (match) {
       const matchLength = match[0].length
       const from = $from.pos - matchLength
       const to = $from.pos
       
-      // Replace [[ with wikilink node
+      // Replace @ with wikilink node
       editor.chain()
         .focus()
         .deleteRange({ from, to })
@@ -135,6 +135,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
             exists: true,
           },
         })
+        .insertContent(' ') // Add space after mention
         .run()
       
       // Save wikilink to database
@@ -362,11 +363,17 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     const currentContent = editor?.getHTML() || content
     
     const now = new Date().toISOString()
+    
+    // Get the latest note from database to preserve canvas position
+    const latestNote = await db.notes.get(note.id)
+    
     const updatedNote: Note = {
-      ...note,
+      ...latestNote, // Use latest version with current canvas position
+      id: note.id,
       title: title.trim() || 'Untitled',
       content: currentContent,
       updatedAt: now,
+      createdAt: note.createdAt, // Preserve creation date
     }
     
     if (tags.length > 0) {

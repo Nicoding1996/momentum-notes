@@ -25,7 +25,7 @@ export async function syncWikilinkToEdge(wikilink: WikiLink): Promise<void> {
     target: wikilink.targetNoteId,
     createdAt: new Date().toISOString(),
     relationshipType: wikilink.relationshipType || 'references',
-    label: `[[${wikilink.targetTitle}]]`,
+    label: wikilink.targetTitle,
   }
   
   await db.edges.add(edge)
@@ -89,8 +89,8 @@ export async function scanAndSyncWikilinks(
   noteId: string,
   content: string
 ): Promise<void> {
-  // Extract all [[Title]] patterns
-  const wikilinkRegex = /\[\[([^\]]+)\]\]/g
+  // Find all wikilink spans in HTML content
+  const wikilinkRegex = /<span[^>]*data-type="wikilink"[^>]*data-title="([^"]+)"[^>]*>/g
   const matches = [...content.matchAll(wikilinkRegex)]
   
   // Get existing wikilinks for this note

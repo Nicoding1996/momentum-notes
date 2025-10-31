@@ -8,74 +8,66 @@
 /* Wikilink Styles */
 /* ============================================ */
 
-/* Wikilink base styles */
+/* Wikilink base styles - Notion-style mention pills */
 .wikilink {
-  color: var(--color-primary-600);
-  background: linear-gradient(135deg,
-    rgb(219 234 254) 0%,
-    rgb(191 219 254) 100%
-  );
-  padding: 2px 8px;
+  color: rgb(37 99 235);
+  background: rgb(219 234 254);
+  padding: 3px 10px;
   border-radius: 6px;
   cursor: pointer;
   text-decoration: none;
-  border-bottom: 2px dotted rgb(96 165 250);
-  transition: all 200ms ease;
+  transition: all 150ms ease;
   font-weight: 500;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .wikilink:hover {
   background: rgb(191 219 254);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
-  border-bottom-style: solid;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.wikilink:active {
+  transform: scale(0.98);
 }
 
 /* Broken wikilink (target doesn't exist) */
 .wikilink-broken {
-  color: rgb(220 38 38);
-  background: linear-gradient(135deg,
-    rgb(254 226 226) 0%,
-    rgb(254 202 202) 100%
-  );
-  border-bottom-color: rgb(248 113 113);
+  color: rgb(185 28 28);
+  background: rgb(254 226 226);
   font-style: italic;
-  opacity: 0.9;
+  opacity: 0.85;
 }
 
 .wikilink-broken:hover {
   background: rgb(254 202 202);
-  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.2);
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
 }
 
 /* Dark mode */
 .dark .wikilink {
-  color: rgb(147 197 253);
-  background: linear-gradient(135deg,
-    rgb(30 58 138) 0%,
-    rgb(29 78 216) 100%
-  );
-  border-bottom-color: rgb(59 130 246);
+  color: rgb(191 219 254);
+  background: rgb(30 58 138);
 }
 
 .dark .wikilink:hover {
   background: rgb(29 78 216);
-  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 .dark .wikilink-broken {
-  color: rgb(252 165 165);
-  background: linear-gradient(135deg,
-    rgb(127 29 29) 0%,
-    rgb(185 28 28) 100%
-  );
-  border-bottom-color: rgb(239 68 68);
+  color: rgb(254 202 202);
+  background: rgb(127 29 29);
 }
 
 .dark .wikilink-broken:hover {
   background: rgb(185 28 28);
-  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
 }
 
 /* Autocomplete Panel */
