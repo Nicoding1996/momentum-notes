@@ -18,9 +18,12 @@ import { TextContextMenu } from '@/components/ui/TextContextMenu'
 import { WikilinkExtension } from '@/extensions/WikilinkExtension'
 import { WikilinkAutocomplete } from '@/components/WikilinkAutocomplete'
 import { BacklinksPanel } from '@/components/BacklinksPanel'
+import { UnlinkedMentionsPanel } from '@/components/UnlinkedMentionsPanel'
 import { LinkSuggestionPanel } from '@/components/LinkSuggestionPanel'
 import { useAILinkSuggestions } from '@/hooks/useAILinkSuggestions'
+import { useUnlinkedMentions } from '@/hooks/useUnlinkedMentions'
 import { findNoteByTitle, scanAndSyncWikilinks } from '@/lib/wikilink-sync'
+import { eventBus } from '@/lib/event-bus'
 
 interface NoteEditorProps {
   note: Note
@@ -70,6 +73,16 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     currentTags: tags,
     enabled: aiStatus.available,
     triggerMode: 'auto',
+  })
+
+  // Unlinked Mentions
+  const {
+    mentions: unlinkedMentions,
+    isLoading: unlinkedMentionsLoading,
+  } = useUnlinkedMentions({
+    currentNoteId: note.id,
+    currentNoteTitle: title,
+    enabled: true,
   })
   
   // Wikilink handlers
@@ -218,6 +231,70 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     
     console.log('NoteEditor: State updated for note:', note.title)
   }, [note.id, editor])
+
+  // Hydrate wikilinks from database when opening a note (handles links created while note wasn't open)
+  useEffect(() => {
+    if (!editor) return
+    let cancelled = false
+
+    const hydrate = async () => {
+      try {
+        const links = await db.wikilinks
+          .where('sourceNoteId')
+          .equals(note.id)
+          .toArray()
+
+        if (cancelled || links.length === 0) return
+
+        // For each stored wikilink, replace the first matching plain-text occurrence
+        for (const link of links) {
+          let replaced = false
+          const search = (link.targetTitle || '').trim()
+          if (!search) continue
+
+          const lowerSearch = search.toLowerCase()
+
+          const { state } = editor
+          const { doc } = state
+
+          doc.descendants((node, pos) => {
+            if (replaced || node.type.name !== 'text') return
+            const text = node.text || ''
+            const idx = text.toLowerCase().indexOf(lowerSearch)
+            if (idx !== -1) {
+              const from = pos + idx
+              const to = from + search.length
+              editor
+                .chain()
+                .setTextSelection({ from, to })
+                .deleteSelection()
+                .insertContentAt(from, {
+                  type: 'wikilink',
+                  attrs: {
+                    targetNoteId: link.targetNoteId,
+                    targetTitle: link.targetTitle,
+                    exists: !!link.targetNoteId,
+                  },
+                })
+                .run()
+              replaced = true
+            }
+          })
+        }
+      } catch (e) {
+        console.error('Hydrate wikilinks failed:', e)
+      }
+    }
+
+    // Run hydrate after initial content is set
+    // Small timeout to ensure editor rendered content first
+    const t = setTimeout(hydrate, 0)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [editor, note.id])
 
   // Text selection (for AI context menu - still used)
   const {
@@ -377,6 +454,57 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [title, content, hasUnsavedChanges, isFocusMode, triggerManually])
+
+  // Listen for wikilink creation events from UnlinkedMentionsPanel
+  useEffect(() => {
+    const handleCreateWikilink = async (data: {
+      noteId: string
+      searchText: string
+      targetNoteId: string
+      targetTitle: string
+    }) => {
+      // Only act if this event targets the currently open note
+      if (data.noteId !== note.id || !editor) return
+
+      // Find and replace the first matching plain text with a wikilink node
+      const { state } = editor
+      const { doc } = state
+      let found = false
+
+      doc.descendants((node, pos) => {
+        if (found || node.type.name !== 'text') return
+        const text = node.text || ''
+        const lowerText = text.toLowerCase()
+        const lowerSearch = data.searchText.toLowerCase()
+        const index = lowerText.indexOf(lowerSearch)
+        if (index !== -1) {
+          const from = pos + index
+          const to = pos + index + data.searchText.length
+          editor.chain()
+            .focus()
+            .setTextSelection({ from, to })
+            .deleteSelection()
+            .insertContentAt(from, {
+              type: 'wikilink',
+              attrs: {
+                targetNoteId: data.targetNoteId,
+                targetTitle: data.targetTitle,
+                exists: true,
+              },
+            })
+            .run()
+          found = true
+        }
+      })
+
+      if (!found) {
+        console.error('Could not find text to replace for wikilink:', data.searchText)
+      }
+    }
+
+    eventBus.on('create-wikilink', handleCreateWikilink)
+    return () => eventBus.off('create-wikilink', handleCreateWikilink)
+  }, [editor, note.id])
 
   const handleSave = async (silent = false) => {
     if (!silent) setIsSaving(true)
@@ -951,6 +1079,12 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   currentNoteId={note.id}
                   currentNoteTitle={title}
                   onNavigateToNote={handleNavigateToNote}
+                />
+                <UnlinkedMentionsPanel
+                  mentions={unlinkedMentions}
+                  isLoading={unlinkedMentionsLoading}
+                  currentNoteId={note.id}
+                  currentNoteTitle={title}
                 />
               </div>
             )}

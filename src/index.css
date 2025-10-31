@@ -1080,3 +1080,92 @@
   background: rgb(30 58 138);
   border-color: rgb(29 78 216);
 }
+
+/* ============================================ */
+/* Unlinked Mentions Panel Styles */
+/* ============================================ */
+
+/* Unlinked Mentions Panel Container */
+.unlinked-mentions-panel {
+  border-top: 1px solid rgb(229 231 235);
+  background: rgb(249 250 251);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .unlinked-mentions-panel {
+  border-top-color: rgb(55 65 81);
+  background: rgb(31 41 55);
+}
+
+/* Header */
+.unlinked-mentions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms;
+  font-size: 0.875rem;
+  color: rgb(55 65 81);
+}
+
+.dark .unlinked-mentions-header {
+  color: rgb(209 213 219);
+}
+
+.unlinked-mentions-header:hover {
+  background: rgb(243 244 246);
+}
+
+.dark .unlinked-mentions-header:hover {
+  background: rgb(55 65 81);
+}
+
+/* Content Area */
+.unlinked-mentions-content {
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Empty State */
+.unlinked-mentions-empty {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+/* Individual Unlinked Mention Item */
+.unlinked-mention-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid rgb(229 231 235);
+  transition: all 150ms;
+}
+
+.dark .unlinked-mention-item {
+  background: rgb(17 24 39);
+  border-color: rgb(55 65 81);
+}
+
+.unlinked-mention-item:hover {
+  background: rgb(254 252 232);
+  border-color: rgb(253 224 71);
+}
+
+.dark .unlinked-mention-item:hover {
+  background: rgb(68 64 60);
+  border-color: rgb(234 179 8);
+}
+
+/* Highlight in context */
+.unlinked-mentions-content mark {
+  padding: 1px 3px;
+  border-radius: 3px;
+}
