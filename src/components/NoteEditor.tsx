@@ -22,7 +22,7 @@ import { UnlinkedMentionsPanel } from '@/components/UnlinkedMentionsPanel'
 import { LinkSuggestionPanel } from '@/components/LinkSuggestionPanel'
 import { useAILinkSuggestions } from '@/hooks/useAILinkSuggestions'
 import { useUnlinkedMentions } from '@/hooks/useUnlinkedMentions'
-import { findNoteByTitle, scanAndSyncWikilinks } from '@/lib/wikilink-sync'
+import { findNoteByTitle, scanAndSyncWikilinks, syncWikilinkToEdge } from '@/lib/wikilink-sync'
 import { eventBus } from '@/lib/event-bus'
 
 interface NoteEditorProps {
@@ -168,9 +168,9 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
         .insertContent(' ') // Add space after mention
         .run()
       
-      // Save wikilink to database
+      // Save wikilink to database and sync edge
       const wikilinkId = nanoid()
-      await db.wikilinks.add({
+      const wikilink = {
         id: wikilinkId,
         sourceNoteId: note.id,
         targetNoteId: selectedNote.id,
@@ -178,7 +178,9 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
         position: from,
         createdAt: new Date().toISOString(),
         relationshipType: 'references',
-      })
+      }
+      await db.wikilinks.add(wikilink)
+      await syncWikilinkToEdge(wikilink)
       
       showToast(`Linked to ${selectedNote.title}`, 'success', 2000)
     }
@@ -713,9 +715,9 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
       .insertContent(' ')
       .run()
     
-    // Save wikilink to database
+    // Save wikilink to database and sync edge
     const wikilinkId = nanoid()
-    await db.wikilinks.add({
+    const wikilink = {
       id: wikilinkId,
       sourceNoteId: note.id,
       targetNoteId: noteId,
@@ -723,7 +725,9 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
       position: editor.state.selection.from,
       createdAt: new Date().toISOString(),
       relationshipType: 'references',
-    })
+    }
+    await db.wikilinks.add(wikilink)
+    await syncWikilinkToEdge(wikilink)
     
     // Clear suggestions
     clearSuggestions()

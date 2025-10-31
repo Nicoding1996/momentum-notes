@@ -5,6 +5,7 @@ import { eventBus } from '@/lib/event-bus'
 import { db } from '@/lib/db'
 import { nanoid } from 'nanoid'
 import { useToast } from '@/contexts/ToastContext'
+import { syncWikilinkToEdge } from '@/lib/wikilink-sync'
 
 interface UnlinkedMentionsPanelProps {
   mentions: UnlinkedMention[]
@@ -51,7 +52,7 @@ export function UnlinkedMentionsPanel({
       
       // Create the wikilink in the database FIRST
       const wikilinkId = nanoid()
-      await db.wikilinks.add({
+      const wikilink = {
         id: wikilinkId,
         sourceNoteId: sourceNote.id,
         targetNoteId: currentNoteId,
@@ -59,7 +60,11 @@ export function UnlinkedMentionsPanel({
         position: textPosition,
         createdAt: new Date().toISOString(),
         relationshipType: 'references',
-      })
+      }
+      await db.wikilinks.add(wikilink)
+      
+      // Immediately sync the wikilink to create a canvas edge
+      await syncWikilinkToEdge(wikilink)
       
       // Emit event to request wikilink creation in the editor
       // This will be handled by the NoteEditor if/when the note is opened
