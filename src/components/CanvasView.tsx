@@ -31,7 +31,6 @@ import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { TagDisplay } from '@/components/ui/TagDisplay'
 import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
-import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { EdgeContextMenu } from '@/components/ui/EdgeContextMenu'
 import { NodeContextMenu } from '@/components/ui/NodeContextMenu'
@@ -66,15 +65,11 @@ const NoteNode = memo(({ data }: { data: any }) => {
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const isEditingRef = useRef(false)
-  const [nodeSize, setNodeSize] = useState({ width: data.width || 320, height: data.height || 280 })
 
   // Get color configuration
   const noteColor = data.color || 'default'
   const colorConfig = NOTE_COLORS[noteColor as NoteColorId]
   const isEditing = isEditingTitle || isEditingContent
-  
-  // Show toolbar when editing content AND note is large enough
-  const showToolbar = isEditingContent && nodeSize.width > 350 && nodeSize.height > 300
 
   // Track editing state
   useEffect(() => {
@@ -125,20 +120,12 @@ const NoteNode = memo(({ data }: { data: any }) => {
 
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const isMod = e.metaKey || e.ctrlKey
-
     if (e.key === 'Escape') {
       e.preventDefault()
-      handleDoneEditing()
-    } else if (isMod && e.key === 'b') {
-      e.preventDefault()
-      handleFormat('bold')
-    } else if (isMod && e.key === 'i') {
-      e.preventDefault()
-      handleFormat('italic')
-    } else if (isMod && e.key === 'u') {
-      e.preventDefault()
-      handleFormat('underline')
+      setIsEditingContent(false)
+      if (data.onUpdate) {
+        data.onUpdate({ title, content })
+      }
     }
   }
 
@@ -161,105 +148,6 @@ const NoteNode = memo(({ data }: { data: any }) => {
       data.onColorChange(newColor)
     }
   }
-
-  // Handle text formatting
-  const handleFormat = (format: FormatType) => {
-    const textarea = contentRef.current
-    if (!textarea) return
-
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selectedText = content.substring(start, end)
-    let newContent = content
-    let newCursorPos = start
-
-    switch (format) {
-      case 'bold':
-        if (selectedText) {
-          newContent = content.substring(0, start) + `**${selectedText}**` + content.substring(end)
-          newCursorPos = start + selectedText.length + 4
-        } else {
-          newContent = content.substring(0, start) + '****' + content.substring(end)
-          newCursorPos = start + 2
-        }
-        break
-      case 'italic':
-        if (selectedText) {
-          newContent = content.substring(0, start) + `*${selectedText}*` + content.substring(end)
-          newCursorPos = start + selectedText.length + 2
-        } else {
-          newContent = content.substring(0, start) + '**' + content.substring(end)
-          newCursorPos = start + 1
-        }
-        break
-      case 'underline':
-        if (selectedText) {
-          newContent = content.substring(0, start) + `__${selectedText}__` + content.substring(end)
-          newCursorPos = start + selectedText.length + 4
-        } else {
-          newContent = content.substring(0, start) + '____' + content.substring(end)
-          newCursorPos = start + 2
-        }
-        break
-      case 'strikethrough':
-        if (selectedText) {
-          newContent = content.substring(0, start) + `~~${selectedText}~~` + content.substring(end)
-          newCursorPos = start + selectedText.length + 4
-        } else {
-          newContent = content.substring(0, start) + '~~~~' + content.substring(end)
-          newCursorPos = start + 2
-        }
-        break
-      case 'h1':
-        newContent = content.substring(0, start) + '# ' + content.substring(start)
-        newCursorPos = start + 2
-        break
-      case 'h2':
-        newContent = content.substring(0, start) + '## ' + content.substring(start)
-        newCursorPos = start + 3
-        break
-      case 'h3':
-        newContent = content.substring(0, start) + '### ' + content.substring(start)
-        newCursorPos = start + 4
-        break
-      case 'bullet':
-        newContent = content.substring(0, start) + '• ' + content.substring(start)
-        newCursorPos = start + 2
-        break
-      case 'numbered':
-        newContent = content.substring(0, start) + '1. ' + content.substring(start)
-        newCursorPos = start + 3
-        break
-    }
-
-    setContent(newContent)
-    setTimeout(() => {
-      textarea.focus()
-      textarea.setSelectionRange(newCursorPos, newCursorPos)
-    }, 0)
-  }
-
-  const handleDoneEditing = () => {
-    setIsEditingContent(false)
-    if (data.onUpdate) {
-      data.onUpdate({ title, content })
-    }
-  }
-
-  // Track node size for toolbar visibility
-  useEffect(() => {
-    const updateSize = () => {
-      const element = contentRef.current?.closest('.react-flow__node')
-      if (element) {
-        const rect = element.getBoundingClientRect()
-        setNodeSize({ width: rect.width, height: rect.height })
-      }
-    }
-    
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
 
   return (
     <>
@@ -434,16 +322,6 @@ const NoteNode = memo(({ data }: { data: any }) => {
       {data.tags && data.tags.length > 0 && (
         <div className="mb-4 flex-shrink-0 nodrag">
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
-        </div>
-      )}
-      
-      {/* Formatting Toolbar - Only show when editing content and note is large enough */}
-      {showToolbar && (
-        <div className="nodrag">
-          <CanvasFormattingToolbar
-            onFormat={handleFormat}
-            onDone={handleDoneEditing}
-          />
         </div>
       )}
       
