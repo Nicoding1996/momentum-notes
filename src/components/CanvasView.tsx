@@ -1444,7 +1444,7 @@ Return ONLY the JSON array, no other text:`
           selectNodesOnDrag={false}
           connectionMode={ConnectionMode.Loose}
           panOnScroll={true}
-          panOnScrollSpeed={3}
+          panOnScrollSpeed={0.5}
           zoomOnScroll={false}
           zoomOnPinch={false}
           zoomOnDoubleClick={true}
