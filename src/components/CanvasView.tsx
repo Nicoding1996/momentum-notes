@@ -34,6 +34,7 @@ import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
 import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
 import { EdgeContextMenu } from '@/components/ui/EdgeContextMenu'
+import { CanvasFindDialog } from '@/components/ui/CanvasFindDialog'
 import { useToast } from '@/contexts/ToastContext'
 
 interface CanvasViewProps {
@@ -450,6 +451,12 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const [currentZoom, setCurrentZoom] = useState(100)
   const { showToast } = useToast()
   
+  // Canvas Find state
+  const [showFindDialog, setShowFindDialog] = useState(false)
+  const [matchingNoteIds, setMatchingNoteIds] = useState<string[]>([])
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null)
+  
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     edgeId: string
@@ -524,11 +531,21 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
         const width = typeof note.width === 'number' && !isNaN(note.width) ? note.width : 320
         const height = typeof note.height === 'number' && !isNaN(note.height) ? note.height : 280
         
+        // Check if this note is highlighted in find results
+        const isHighlighted = highlightedNoteId === note.id
+        
         return {
           id: note.id,
           type: 'noteNode',
           position: { x, y },
-          style: { width, height },
+          style: {
+            width,
+            height,
+            ...(isHighlighted && {
+              boxShadow: '0 0 0 4px rgba(251, 191, 36, 0.6), 0 0 20px rgba(251, 191, 36, 0.4)',
+              zIndex: 1000,
+            })
+          },
           draggable: true,
           data: {
             title: note.title,
@@ -543,7 +560,7 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
           },
         }
       }),
-    [notes, onEditNote, onDeleteNote, handleNoteUpdate]
+    [notes, onEditNote, onDeleteNote, handleNoteUpdate, handleNoteColorChange, highlightedNoteId]
   )
 
   // Convert database edges to React Flow edges with softer, organic styling
@@ -577,6 +594,108 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges)
   const [selectedEdge, setSelectedEdge] = useState<string | null>(null)
+
+  // Helper function to strip HTML tags for searching
+  const stripHtmlForSearch = useCallback((html: string): string => {
+    const tmp = document.createElement('DIV')
+    tmp.innerHTML = html
+    return tmp.textContent || tmp.innerText || ''
+  }, [])
+
+  // Search for matching notes
+  const handleFindSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setMatchingNoteIds([])
+      setCurrentMatchIndex(0)
+      setHighlightedNoteId(null)
+      return
+    }
+
+    const searchLower = query.toLowerCase()
+    const matches = notes.filter(note => {
+      const titleMatch = note.title.toLowerCase().includes(searchLower)
+      const contentMatch = stripHtmlForSearch(note.content).toLowerCase().includes(searchLower)
+      return titleMatch || contentMatch
+    })
+
+    const matchIds = matches.map(n => n.id)
+    setMatchingNoteIds(matchIds)
+    
+    if (matchIds.length > 0) {
+      setCurrentMatchIndex(0)
+      setHighlightedNoteId(matchIds[0])
+      // Navigate to first match
+      navigateToNote(matchIds[0])
+    } else {
+      setCurrentMatchIndex(0)
+      setHighlightedNoteId(null)
+    }
+  }, [notes, stripHtmlForSearch])
+
+  // Navigate to a specific note with smooth animation
+  const navigateToNote = useCallback((noteId: string) => {
+    const node = nodes.find(n => n.id === noteId)
+    if (!node) return
+
+    const { zoom } = getViewport()
+    const targetZoom = Math.max(zoom, 0.75) // Zoom in if needed
+    
+    // Get wrapper dimensions for centering
+    const wrapper = reactFlowWrapper.current
+    if (!wrapper) return
+    
+    const rect = wrapper.getBoundingClientRect()
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    
+    // Calculate position to center the note
+    const x = centerX - node.position.x * targetZoom - (node.style?.width as number || 320) * targetZoom / 2
+    const y = centerY - node.position.y * targetZoom - (node.style?.height as number || 280) * targetZoom / 2
+    
+    setViewport({ x, y, zoom: targetZoom }, { duration: 400 })
+  }, [nodes, getViewport, setViewport])
+
+  // Navigate to next match
+  const handleFindNext = useCallback(() => {
+    if (matchingNoteIds.length === 0) return
+    
+    const nextIndex = (currentMatchIndex + 1) % matchingNoteIds.length
+    setCurrentMatchIndex(nextIndex)
+    setHighlightedNoteId(matchingNoteIds[nextIndex])
+    navigateToNote(matchingNoteIds[nextIndex])
+  }, [matchingNoteIds, currentMatchIndex, navigateToNote])
+
+  // Navigate to previous match
+  const handleFindPrevious = useCallback(() => {
+    if (matchingNoteIds.length === 0) return
+    
+    const prevIndex = currentMatchIndex === 0 ? matchingNoteIds.length - 1 : currentMatchIndex - 1
+    setCurrentMatchIndex(prevIndex)
+    setHighlightedNoteId(matchingNoteIds[prevIndex])
+    navigateToNote(matchingNoteIds[prevIndex])
+  }, [matchingNoteIds, currentMatchIndex, navigateToNote])
+
+  // Close find dialog
+  const handleFindClose = useCallback(() => {
+    setShowFindDialog(false)
+    setMatchingNoteIds([])
+    setCurrentMatchIndex(0)
+    setHighlightedNoteId(null)
+  }, [])
+
+  // Global keyboard shortcut for Ctrl+F / Cmd+F
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+F or Cmd+F
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault()
+        setShowFindDialog(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Update nodes when notes change (added, removed, or content updated)
   const prevNoteCountRef = useRef(0)
@@ -1202,6 +1321,18 @@ Return ONLY the JSON array, no other text:`
             nodeStrokeColor="#9ca3af"
           />
         </ReactFlow>
+
+        {/* Canvas Find Dialog */}
+        {showFindDialog && (
+          <CanvasFindDialog
+            onClose={handleFindClose}
+            onSearch={handleFindSearch}
+            onNext={handleFindNext}
+            onPrevious={handleFindPrevious}
+            currentIndex={currentMatchIndex}
+            totalMatches={matchingNoteIds.length}
+          />
+        )}
 
         {/* Floating Discover Connections Button - Only show with 3+ notes */}
         {status.available && notes.length >= 3 && (
