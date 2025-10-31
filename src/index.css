@@ -171,14 +171,22 @@
   .editor-content-enhanced .ProseMirror {
     @apply outline-none min-h-[400px] sm:min-h-[500px] lg:min-h-[600px];
     font-size: clamp(1rem, 1.5vw, 1.25rem);
-    line-height: 1.75;
+    line-height: 1.6;
     letter-spacing: -0.011em;
   }
   
-  .editor-content-enhanced .ProseMirror p {
-    @apply mb-4;
+  /* CRITICAL: Override ALL paragraph spacing */
+  .editor-content-enhanced .ProseMirror p,
+  .editor-content-enhanced .ProseMirror > p,
+  .ProseMirror p,
+  .ProseMirror > p,
+  div[class*="ProseMirror"] p {
+    margin-bottom: 0.25rem !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
     font-size: clamp(1rem, 1.5vw, 1.125rem);
-    line-height: 1.75;
+    line-height: 1.5 !important;
   }
   
   .editor-content-enhanced .ProseMirror h1 {
@@ -844,6 +852,42 @@
 
 .editor-textarea.has-selection {
   cursor: context-menu;
+}
+
+/* Canvas note textarea - normal line spacing when pressing Enter */
+textarea.leading-relaxed,
+textarea.text-base.leading-relaxed {
+  line-height: 1.4 !important;
+}
+
+/* NUCLEAR OPTION: Override ALL paragraph spacing everywhere */
+.prose p,
+.prose-lg p,
+.prose-xl p,
+.prose-2xl p,
+.prose-sm p,
+.prose-base p,
+article p,
+[class*="prose"] p {
+  margin-top: 0 !important;
+  margin-bottom: 0.25rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* Target every possible paragraph element */
+.editor-content-enhanced p,
+.editor-content-enhanced > p,
+.editor-content-enhanced div p,
+.editor-content-enhanced [class*="ProseMirror"] p,
+[class*="editor"] p,
+[contenteditable="true"] p,
+[role="textbox"] p {
+  margin-top: 0 !important;
+  margin-bottom: 0.25rem !important;
+  padding: 0 !important;
+  line-height: 1.5 !important;
 }
 
 /* Custom text cursor for note editing - Microsoft Word style capital I */

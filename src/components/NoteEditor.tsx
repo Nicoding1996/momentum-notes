@@ -727,8 +727,16 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     // Save current content to history before inserting
     setContentHistory(prev => [...prev, content])
     
+    // Split long paragraphs into proper sentences with breaks
+    // Add double newlines after sentences that end with period, question mark, or exclamation
+    let formattedContent = contentToInsert
+      .replace(/\.\s+(?=[A-Z])/g, '.\n\n')  // Add breaks after sentences starting with capital
+      .replace(/\?\s+(?=[A-Z])/g, '?\n\n')   // Add breaks after questions
+      .replace(/!\s+(?=[A-Z])/g, '!\n\n')    // Add breaks after exclamations
+      .trim()
+    
     // Convert markdown to HTML for proper rendering in Tiptap
-    const htmlToInsert = marked(contentToInsert, {
+    const htmlToInsert = marked(formattedContent, {
       breaks: true,
       gfm: true
     }) as string
@@ -974,7 +982,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap">
                   <button
                     onClick={handleBold}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('bold')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Bold (Ctrl+B)"
                     aria-label="Bold"
                   >
@@ -982,7 +994,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   </button>
                   <button
                     onClick={handleItalic}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('italic')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Italic (Ctrl+I)"
                     aria-label="Italic"
                   >
@@ -990,7 +1006,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   </button>
                   <button
                     onClick={handleUnderline}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('underline')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Underline (Ctrl+U)"
                     aria-label="Underline"
                   >
@@ -998,7 +1018,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   </button>
                   <button
                     onClick={handleStrikethrough}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('strike')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Strikethrough"
                     aria-label="Strikethrough"
                   >
@@ -1009,7 +1033,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   
                   <button
                     onClick={handleBulletList}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('bulletList')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Bullet List"
                     aria-label="Bullet List"
                   >
@@ -1017,7 +1045,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                   </button>
                   <button
                     onClick={handleNumberedList}
-                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    className={`p-2 rounded-lg transition-colors ${
+                      editor?.isActive('orderedList')
+                        ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                        : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     title="Numbered List"
                     aria-label="Numbered List"
                   >
@@ -1053,7 +1085,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleBold}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('bold')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Bold"
                   aria-label="Bold"
                 >
@@ -1061,7 +1097,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 </button>
                 <button
                   onClick={handleItalic}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('italic')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Italic"
                   aria-label="Italic"
                 >
@@ -1069,7 +1109,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 </button>
                 <button
                   onClick={handleUnderline}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('underline')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Underline"
                   aria-label="Underline"
                 >
@@ -1077,7 +1121,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 </button>
                 <button
                   onClick={handleStrikethrough}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('strike')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Strikethrough"
                   aria-label="Strikethrough"
                 >
@@ -1088,7 +1136,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 
                 <button
                   onClick={handleBulletList}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('bulletList')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Bullet List"
                   aria-label="Bullet List"
                 >
@@ -1096,7 +1148,11 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
                 </button>
                 <button
                   onClick={handleNumberedList}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                  className={`p-2 rounded-lg transition-colors ${
+                    editor?.isActive('orderedList')
+                      ? 'bg-accent-500 text-gray-900 dark:bg-accent-400 dark:text-gray-900'
+                      : 'hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
                   title="Numbered List"
                   aria-label="Numbered List"
                 >
