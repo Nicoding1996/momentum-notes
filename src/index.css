@@ -689,6 +689,74 @@
   cursor: context-menu;
 }
 
+/* Markdown content rendering in chat */
+.markdown-content {
+  @apply leading-relaxed;
+}
+
+/* Bold text: **text** or __text__ */
+.markdown-content strong,
+.markdown-content b {
+  @apply font-bold text-gray-900 dark:text-gray-100;
+}
+
+/* Italic text: *text* or _text_ */
+.markdown-content em,
+.markdown-content i {
+  @apply italic;
+}
+
+/* Inline code: `code` */
+.markdown-content code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono;
+}
+
+/* Bullet points and lists */
+.markdown-content ul {
+  @apply list-disc list-inside space-y-1 my-2;
+}
+
+.markdown-content ol {
+  @apply list-decimal list-inside space-y-1 my-2;
+}
+
+.markdown-content li {
+  @apply leading-relaxed;
+}
+
+/* Headings */
+.markdown-content h1 {
+  @apply text-lg font-bold mt-3 mb-2;
+}
+
+.markdown-content h2 {
+  @apply text-base font-bold mt-2 mb-1;
+}
+
+.markdown-content h3 {
+  @apply text-sm font-semibold mt-2 mb-1;
+}
+
+/* Blockquotes */
+.markdown-content blockquote {
+  @apply border-l-2 border-gray-300 dark:border-gray-600 pl-3 italic my-2;
+}
+
+/* Links */
+.markdown-content a {
+  @apply text-primary-600 dark:text-primary-400 hover:underline;
+}
+
+/* Horizontal rules */
+.markdown-content hr {
+  @apply border-gray-300 dark:border-gray-600 my-3;
+}
+
+/* Paragraphs */
+.markdown-content p {
+  @apply mb-2;
+}
+
 /* Zoom-responsive adjustments */
 @media (min-resolution: 1.25dppx) and (max-resolution: 1.5dppx) {
   body {

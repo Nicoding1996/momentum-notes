@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, Loader2, Check, Copy, Undo2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useToast } from '@/contexts/ToastContext'
 import type { Note } from '@/types/note'
@@ -103,12 +104,15 @@ export function AIChatPanel({ note, onReplaceContent, onInsertContent, onUndo, c
     return text
   }
 
-  // Strip conversational filler and conversation history from content before adding to note
+  // Strip conversational filler, intent markers, and conversation history from content before adding to note
   const stripFillerText = (content: string): string => {
-    // First, remove the entire conversation history block if it exists
+    // First, remove INTENT: markers if present
+    let cleanedContent = content.replace(/^INTENT:(REPLACE|ADD|INFO)\s*/i, '')
+    
+    // Remove the entire conversation history block if it exists
     // This pattern looks for "Recent Conversation:" and removes everything up to the actual content
     const historyPattern = /^\s*\*\*?Recent Conversation:\*\*?\s*[\s\S]*?(USER:|ASSISTANT:)[\s\S]*?(\n\n|\r\n\r\n)/i
-    let cleanedContent = content.replace(historyPattern, '')
+    cleanedContent = cleanedContent.replace(historyPattern, '')
 
     // Then, remove common conversational filler phrases from the beginning of the text
     const fillerPatterns = [
@@ -274,9 +278,12 @@ Begin your response now:`
       
       console.log('[AI Chat] Final intent:', intent)
 
+      // Store the cleaned content without INTENT marker for display
+      const displayContent = content.replace(/^INTENT:(REPLACE|ADD|INFO)\s*/i, '').trim()
+      
       const assistantMessage: Message = {
         role: 'assistant',
-        content: content,
+        content: displayContent,
         timestamp: new Date(),
         isActionable: intent === 'REPLACE' || intent === 'ADD',
         intent: intent,
@@ -393,9 +400,27 @@ Begin your response now:`
                   : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
               }`}
             >
-              <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">
-                {message.content}
-              </p>
+              {message.role === 'assistant' ? (
+                <div className="text-xs sm:text-sm leading-relaxed markdown-content prose prose-sm max-w-none dark:prose-invert">
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-bold text-gray-900 dark:text-gray-100">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                      li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+                      code: ({ children }) => <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>,
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words">
+                  {message.content}
+                </p>
+              )}
               <p
                 className={`text-[10px] sm:text-xs mt-1 ${
                   message.role === 'user'

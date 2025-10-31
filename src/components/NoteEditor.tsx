@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import UnderlineExtension from '@tiptap/extension-underline'
 import ImageExtension from '@tiptap/extension-image'
 import { X, Save, Sparkles, Mic, MicOff, Maximize2, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Image } from 'lucide-react'
+import { marked } from 'marked'
 import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
@@ -353,9 +354,15 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     // Save current content to history before replacing
     setContentHistory(prev => [...prev, content])
     
+    // Convert markdown to HTML for proper rendering in Tiptap
+    const htmlContent = marked(newContent, {
+      breaks: true,
+      gfm: true
+    }) as string
+    
     // Update both React state and Tiptap editor
-    setContent(newContent)
-    editor.commands.setContent(newContent)
+    setContent(htmlContent)
+    editor.commands.setContent(htmlContent)
   }
 
   const handleInsertContent = (contentToInsert: string) => {
@@ -364,10 +371,16 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     // Save current content to history before inserting
     setContentHistory(prev => [...prev, content])
     
+    // Convert markdown to HTML for proper rendering in Tiptap
+    const htmlToInsert = marked(contentToInsert, {
+      breaks: true,
+      gfm: true
+    }) as string
+    
     // Smart insertion: no extra newlines if note is empty
     const newContent = content.trim() === ''
-      ? contentToInsert
-      : content + '\n\n' + contentToInsert
+      ? htmlToInsert
+      : content + '\n\n' + htmlToInsert
     
     // Update both React state and Tiptap editor
     setContent(newContent)
