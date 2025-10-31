@@ -122,10 +122,10 @@ const NoteNode = memo(({ data }: { data: any }) => {
     <>
       {/* Resize handles - subtle, elegant, minimal (matches "Light from Sky" aesthetic) */}
       <NodeResizer
-        minWidth={240}
-        minHeight={200}
-        maxWidth={600}
-        maxHeight={800}
+        minWidth={280}
+        minHeight={240}
+        maxWidth={700}
+        maxHeight={900}
         isVisible={true}
         lineClassName="!border !border-gray-300/40 dark:!border-gray-600/40"
         handleClassName="!w-3 !h-3 !bg-white dark:!bg-gray-800 !border-2 !border-gray-400/60 dark:!border-gray-500/60 !rounded-full opacity-0 group-hover:opacity-100 !transition-opacity !duration-200"
@@ -140,7 +140,7 @@ const NoteNode = memo(({ data }: { data: any }) => {
         }}
       />
       <div
-        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden flex flex-col"
+        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-8 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden flex flex-col"
         style={{
           willChange: 'transform, box-shadow',
           transform: 'translate3d(0, 0, 0)',
@@ -155,34 +155,34 @@ const NoteNode = memo(({ data }: { data: any }) => {
           e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
         }}
       >
-      {/* Connection handles - Accent color for visibility */}
+      {/* Connection handles - Only show on hover for reduced clutter */}
       <Handle
         type="source"
         position={Position.Top}
         id="top"
-        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
-        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="bottom"
-        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
-        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
       <Handle
         type="source"
         position={Position.Left}
         id="left"
-        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
-        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
       <Handle
         type="source"
         position={Position.Right}
         id="right"
-        className="w-3 h-3 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200 !border-2 !border-white dark:!border-gray-800"
-        style={{ boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }}
+        className="w-4 h-4 !bg-accent-500 dark:!bg-accent-400 opacity-0 group-hover:opacity-100 transition-all duration-200 !border-2 !border-white dark:!border-gray-800 hover:scale-125"
+        style={{ boxShadow: '0 2px 6px rgba(251, 191, 36, 0.4)' }}
       />
       
       <div className="flex items-start justify-between mb-4 flex-shrink-0">
@@ -200,11 +200,11 @@ const NoteNode = memo(({ data }: { data: any }) => {
                 handleTitleBlur()
               }
             }}
-            className="font-display font-semibold text-lg flex-1 text-gray-900 dark:text-gray-100 tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
+            className="font-display font-semibold text-xl flex-1 text-gray-900 dark:text-gray-100 tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
           />
         ) : (
           <h4
-            className="font-display font-semibold text-lg line-clamp-2 flex-1 text-gray-900 dark:text-gray-100 tracking-tight cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
+            className="font-display font-semibold text-xl line-clamp-3 flex-1 text-gray-900 dark:text-gray-100 tracking-tight cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
             onClick={handleTitleClick}
           >
             {title || 'Untitled'}
@@ -246,12 +246,16 @@ const NoteNode = memo(({ data }: { data: any }) => {
             onChange={(e) => setContent(e.target.value)}
             onBlur={handleContentBlur}
             onClick={(e) => e.stopPropagation()}
-            className="text-base text-gray-600 dark:text-gray-400 leading-relaxed flex-1 bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1 resize-none"
+            className="text-base text-gray-600 dark:text-gray-300 leading-relaxed flex-1 bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1 resize-none"
             placeholder="Click to add content..."
           />
         ) : (
           <p
-            className="text-base text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed flex-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
+            className="text-base text-gray-600 dark:text-gray-300 line-clamp-5 leading-relaxed flex-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors relative"
+            style={{
+              maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)'
+            }}
             onClick={handleContentClick}
           >
             {content || 'Click to add content...'}
@@ -326,11 +330,11 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
   const initialNodes: Node[] = useMemo(
     () =>
       notes.map((note, index) => {
-        // Ensure position values are valid numbers
-        const x = typeof note.x === 'number' && !isNaN(note.x) ? note.x : (index % 4) * 350 + 50
-        const y = typeof note.y === 'number' && !isNaN(note.y) ? note.y : Math.floor(index / 4) * 250 + 50
-        const width = typeof note.width === 'number' && !isNaN(note.width) ? note.width : 280
-        const height = typeof note.height === 'number' && !isNaN(note.height) ? note.height : 240
+        // Ensure position values are valid numbers - improved spacing
+        const x = typeof note.x === 'number' && !isNaN(note.x) ? note.x : (index % 4) * 400 + 50
+        const y = typeof note.y === 'number' && !isNaN(note.y) ? note.y : Math.floor(index / 4) * 300 + 50
+        const width = typeof note.width === 'number' && !isNaN(note.width) ? note.width : 320
+        const height = typeof note.height === 'number' && !isNaN(note.height) ? note.height : 280
         
         return {
           id: note.id,
@@ -854,7 +858,7 @@ Return ONLY the JSON array, no other text:`
     <div className="w-full h-full flex flex-col">
       <div
         ref={reactFlowWrapper}
-        className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 relative"
+        className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 relative"
         style={{
           height: 'calc(100vh - 64px)',
           touchAction: 'none',
@@ -908,8 +912,23 @@ Return ONLY the JSON array, no other text:`
             color="#d6d3d1"
           />
           
-          {/* Custom Zoom Controls - Canva Style */}
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 bg-white dark:bg-gray-900 rounded-full px-4 py-2.5 shadow-lg border border-gray-200 dark:border-gray-700">
+          {/* Custom Zoom Controls - Enhanced Canva Style */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-full px-5 py-3 shadow-xl border border-gray-200 dark:border-gray-700">
+            {/* Preset Zoom Buttons */}
+            <button
+              onClick={() => handleZoomChange(25)}
+              className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+              title="25% zoom"
+            >
+              25%
+            </button>
+            <button
+              onClick={() => handleZoomChange(50)}
+              className="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+              title="50% zoom"
+            >
+              50%
+            </button>
             <button
               onClick={handleZoomOut}
               className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -932,7 +951,7 @@ Return ONLY the JSON array, no other text:`
               />
               <button
                 onClick={handleFitView}
-                className="min-w-[48px] px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                className="min-w-[52px] px-3 py-1 text-sm font-bold text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
                 {currentZoom}%
               </button>
@@ -957,8 +976,8 @@ Return ONLY the JSON array, no other text:`
           />
         </ReactFlow>
 
-        {/* Floating AI Auto-Link Button */}
-        {status.available && notes.length >= 2 && (
+        {/* Floating AI Auto-Link Button - Only show with 3+ notes */}
+        {status.available && notes.length >= 3 && (
           <button
             onClick={handleAutoLink}
             disabled={isAutoLinking}

@@ -13,11 +13,13 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50;
+    @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-family: 'Karla', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    line-height: 1.65;
+    font-size: 16px;
   }
   
   html {
@@ -31,6 +33,11 @@
   /* Better text rendering - Montserrat for headings */
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-semibold tracking-tight;
+    line-height: 1.3;
+  }
+  
+  p {
+    line-height: 1.65;
   }
 }
 
@@ -122,7 +129,7 @@
 
   /* Modern card styles - Hardware Accelerated with "Light from Sky" principle */
   .card {
-    @apply bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800/60;
+    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60;
     @apply backdrop-blur-xl;
     box-shadow:
       0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset,
@@ -148,7 +155,7 @@
 
   /* Note block - refined & elegant with hardware acceleration and depth */
   .note-block {
-    @apply bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/60 dark:border-gray-800/60;
+    @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/60 dark:border-gray-700/60;
     will-change: transform, box-shadow;
     transform: translate3d(0, 0, 0);
     @apply transition-all duration-200 ease-out;
@@ -165,7 +172,7 @@
       0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset,
       0 12px 24px -6px rgba(0, 0, 0, 0.12),
       0 8px 16px -4px rgba(0, 0, 0, 0.06);
-    @apply border-gray-300 dark:border-gray-700;
+    @apply border-gray-300 dark:border-gray-600;
   }
 
   /* Glass morphism effects */
@@ -244,12 +251,14 @@
   /* Input styles */
   .input {
     @apply w-full px-4 py-2.5 rounded-xl;
-    @apply bg-white dark:bg-gray-900;
-    @apply border border-gray-300 dark:border-gray-700;
+    @apply bg-white dark:bg-gray-800;
+    @apply border border-gray-300 dark:border-gray-600;
     @apply text-gray-900 dark:text-gray-100;
     @apply placeholder-gray-400 dark:placeholder-gray-500;
     @apply transition-all duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500;
+    font-size: 16px;
+    line-height: 1.5;
   }
 
   /* Tag styles */
@@ -307,8 +316,8 @@
 
   /* Modal container - Enhanced for zoom */
   .modal {
-    @apply relative bg-white dark:bg-gray-900 rounded-xl sm:rounded-2xl shadow-2xl;
-    @apply border border-gray-200/60 dark:border-gray-800/60;
+    @apply relative bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl;
+    @apply border border-gray-200/60 dark:border-gray-700/60;
     animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     /* Ensure modal scales properly with zoom */
     max-width: 95vw;
@@ -534,8 +543,8 @@
 }
 
 .react-flow__controls {
-  @apply shadow-lg border border-gray-200/60 dark:border-gray-800/60 rounded-xl overflow-hidden;
-  @apply bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl;
+  @apply shadow-lg border border-gray-200/60 dark:border-gray-700/60 rounded-xl overflow-hidden;
+  @apply bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl;
 }
 
 .react-flow__controls-button {
@@ -546,8 +555,8 @@
 
 .react-flow__minimap {
   @apply rounded-xl overflow-hidden shadow-lg;
-  @apply border border-gray-200/60 dark:border-gray-800/60;
-  @apply bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl;
+  @apply border border-gray-200/60 dark:border-gray-700/60;
+  @apply bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl;
 }
 
 /* Selection styling */
@@ -588,7 +597,7 @@
 /* Custom Context Menu Styles */
 .context-menu-container {
   @apply backdrop-blur-xl;
-  @apply border border-gray-200/60 dark:border-gray-800/60;
+  @apply border border-gray-200/60 dark:border-gray-700/60;
   @apply rounded-xl shadow-xl;
   background-color: rgba(255, 255, 255, 0.98);
   box-shadow:
@@ -604,7 +613,7 @@
 }
 
 .dark .context-menu-container {
-  background-color: rgba(23, 23, 23, 0.98);
+  background-color: rgba(31, 41, 55, 0.98);
 }
 
 .context-menu-header {

@@ -71,11 +71,11 @@ function App() {
     
     // Calculate position - use viewport center if available, otherwise use default grid position
     const noteCount = notes?.length || 0
-    const defaultX = (noteCount % 4) * 350 + 50
-    const defaultY = Math.floor(noteCount / 4) * 250 + 50
+    const defaultX = (noteCount % 4) * 400 + 50
+    const defaultY = Math.floor(noteCount / 4) * 300 + 50
     
-    // Add a cascade offset (20px down and right for each note) to make multiple notes visible
-    const cascadeOffset = (noteCount % 5) * 20 // Reset offset every 5 notes
+    // Add a cascade offset (25px down and right for each note) to make multiple notes visible
+    const cascadeOffset = (noteCount % 5) * 25 // Reset offset every 5 notes
     
     const newNote: Note = {
       id,
@@ -84,8 +84,8 @@ function App() {
       createdAt: now,
       updatedAt: now,
       // Place new note at the center of the current viewport with cascade offset
-      x: viewportCenter ? Math.round(viewportCenter.x - 140 + cascadeOffset) : defaultX,
-      y: viewportCenter ? Math.round(viewportCenter.y - 120 + cascadeOffset) : defaultY,
+      x: viewportCenter ? Math.round(viewportCenter.x - 160 + cascadeOffset) : defaultX,
+      y: viewportCenter ? Math.round(viewportCenter.y - 140 + cascadeOffset) : defaultY,
     }
     await db.notes.add(newNote)
   }
@@ -292,22 +292,20 @@ function App() {
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1600px] mx-auto">
                     {notes.map((note) => (
                       <div
                         key={note.id}
-                        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-6 cursor-pointer group transition-all duration-300 ease-out"
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 cursor-pointer group transition-all duration-300 ease-out hover:shadow-lg"
                         style={{
                           willChange: 'transform, box-shadow',
-                          boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
-                          e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
+                          e.currentTarget.style.transform = 'translateY(-2px)'
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
-                          e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+                          e.currentTarget.style.transform = 'translateY(0)'
                         }}
                         onClick={() => openEditor(note)}
                       >
@@ -329,20 +327,20 @@ function App() {
                         
                         {note.tags && note.tags.length > 0 && (
                           <div className="mb-4">
-                            <TagDisplay tagIds={note.tags} maxDisplay={3} />
+                            <TagDisplay tagIds={note.tags} maxDisplay={2} />
                           </div>
                         )}
                         
                         {note.content && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-4 mb-4 leading-relaxed">
+                          <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-4 mb-4 leading-relaxed">
                             {stripHtmlTags(note.content)}
                           </p>
                         )}
                         
-                        <div className="flex items-center justify-between text-xs pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div className="flex items-center justify-between text-xs pt-4 border-t border-gray-100 dark:border-gray-700">
                           <time
                             dateTime={note.updatedAt}
-                            className="text-gray-500 dark:text-gray-500 font-medium"
+                            className="text-gray-500 dark:text-gray-400 font-medium"
                           >
                             {new Date(note.updatedAt).toLocaleDateString(undefined, {
                               month: 'short',
@@ -350,8 +348,8 @@ function App() {
                               year: 'numeric'
                             })}
                           </time>
-                          <span className="opacity-0 group-hover:opacity-100 transition-opacity text-accent-600 dark:text-accent-400 font-semibold flex items-center gap-1">
-                            Open →
+                          <span className="text-gray-400 dark:text-gray-500 font-medium">
+                            {stripHtmlTags(note.content).split(/\s+/).filter(Boolean).length} words
                           </span>
                         </div>
                       </div>
