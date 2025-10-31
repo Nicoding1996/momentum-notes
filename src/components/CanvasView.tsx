@@ -23,12 +23,15 @@ import '@xyflow/react/dist/style.css'
 import { Trash2, Edit, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { nanoid } from 'nanoid'
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { Note } from '@/types/note'
+import type { Note, NoteColorId } from '@/types/note'
+import { NOTE_COLORS } from '@/types/note'
 import type { NoteEdge } from '@/types/edge'
 import { RELATIONSHIP_TYPES } from '@/types/edge'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { TagDisplay } from '@/components/ui/TagDisplay'
+import { NoteColorPicker } from '@/components/ui/NoteColorPicker'
+import { CanvasFormattingToolbar, type FormatType } from '@/components/ui/CanvasFormattingToolbar'
 
 interface CanvasViewProps {
   notes: Note[]
@@ -56,6 +59,15 @@ const NoteNode = memo(({ data }: { data: any }) => {
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
   const isEditingRef = useRef(false)
+  const [nodeSize, setNodeSize] = useState({ width: data.width || 320, height: data.height || 280 })
+
+  // Get color configuration
+  const noteColor = data.color || 'default'
+  const colorConfig = NOTE_COLORS[noteColor as NoteColorId]
+  const isEditing = isEditingTitle || isEditingContent
+  
+  // Show toolbar when editing content AND note is large enough
+  const showToolbar = isEditingContent && nodeSize.width > 350 && nodeSize.height > 300
 
   // Track editing state
   useEffect(() => {
@@ -104,6 +116,25 @@ const NoteNode = memo(({ data }: { data: any }) => {
     setTimeout(() => contentRef.current?.focus(), 0)
   }
 
+  // Handle keyboard shortcuts
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const isMod = e.metaKey || e.ctrlKey
+
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      handleDoneEditing()
+    } else if (isMod && e.key === 'b') {
+      e.preventDefault()
+      handleFormat('bold')
+    } else if (isMod && e.key === 'i') {
+      e.preventDefault()
+      handleFormat('italic')
+    } else if (isMod && e.key === 'u') {
+      e.preventDefault()
+      handleFormat('underline')
+    }
+  }
+
   const handleTitleBlur = () => {
     setIsEditingTitle(false)
     if (data.onUpdate) {
@@ -118,41 +149,158 @@ const NoteNode = memo(({ data }: { data: any }) => {
     }
   }
 
+  const handleColorChange = (newColor: NoteColorId) => {
+    if (data.onColorChange) {
+      data.onColorChange(newColor)
+    }
+  }
+
+  // Handle text formatting
+  const handleFormat = (format: FormatType) => {
+    const textarea = contentRef.current
+    if (!textarea) return
+
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selectedText = content.substring(start, end)
+    let newContent = content
+    let newCursorPos = start
+
+    switch (format) {
+      case 'bold':
+        if (selectedText) {
+          newContent = content.substring(0, start) + `**${selectedText}**` + content.substring(end)
+          newCursorPos = start + selectedText.length + 4
+        } else {
+          newContent = content.substring(0, start) + '****' + content.substring(end)
+          newCursorPos = start + 2
+        }
+        break
+      case 'italic':
+        if (selectedText) {
+          newContent = content.substring(0, start) + `*${selectedText}*` + content.substring(end)
+          newCursorPos = start + selectedText.length + 2
+        } else {
+          newContent = content.substring(0, start) + '**' + content.substring(end)
+          newCursorPos = start + 1
+        }
+        break
+      case 'underline':
+        if (selectedText) {
+          newContent = content.substring(0, start) + `__${selectedText}__` + content.substring(end)
+          newCursorPos = start + selectedText.length + 4
+        } else {
+          newContent = content.substring(0, start) + '____' + content.substring(end)
+          newCursorPos = start + 2
+        }
+        break
+      case 'strikethrough':
+        if (selectedText) {
+          newContent = content.substring(0, start) + `~~${selectedText}~~` + content.substring(end)
+          newCursorPos = start + selectedText.length + 4
+        } else {
+          newContent = content.substring(0, start) + '~~~~' + content.substring(end)
+          newCursorPos = start + 2
+        }
+        break
+      case 'h1':
+        newContent = content.substring(0, start) + '# ' + content.substring(start)
+        newCursorPos = start + 2
+        break
+      case 'h2':
+        newContent = content.substring(0, start) + '## ' + content.substring(start)
+        newCursorPos = start + 3
+        break
+      case 'h3':
+        newContent = content.substring(0, start) + '### ' + content.substring(start)
+        newCursorPos = start + 4
+        break
+      case 'bullet':
+        newContent = content.substring(0, start) + '• ' + content.substring(start)
+        newCursorPos = start + 2
+        break
+      case 'numbered':
+        newContent = content.substring(0, start) + '1. ' + content.substring(start)
+        newCursorPos = start + 3
+        break
+    }
+
+    setContent(newContent)
+    setTimeout(() => {
+      textarea.focus()
+      textarea.setSelectionRange(newCursorPos, newCursorPos)
+    }, 0)
+  }
+
+  const handleDoneEditing = () => {
+    setIsEditingContent(false)
+    if (data.onUpdate) {
+      data.onUpdate({ title, content })
+    }
+  }
+
+  // Track node size for toolbar visibility
+  useEffect(() => {
+    const updateSize = () => {
+      const element = contentRef.current?.closest('.react-flow__node')
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        setNodeSize({ width: rect.width, height: rect.height })
+      }
+    }
+    
+    updateSize()
+    window.addEventListener('resize', updateSize)
+    return () => window.removeEventListener('resize', updateSize)
+  }, [])
+
   return (
     <>
-      {/* Resize handles - subtle, elegant, minimal (matches "Light from Sky" aesthetic) */}
+      {/* Enhanced Resize handles - Larger, always-visible corners */}
       <NodeResizer
         minWidth={280}
         minHeight={240}
         maxWidth={700}
         maxHeight={900}
         isVisible={true}
-        lineClassName="!border !border-gray-300/40 dark:!border-gray-600/40"
-        handleClassName="!w-3 !h-3 !bg-white dark:!bg-gray-800 !border-2 !border-gray-400/60 dark:!border-gray-500/60 !rounded-full opacity-0 group-hover:opacity-100 !transition-opacity !duration-200"
+        lineClassName="!border !border-accent-400/30 dark:!border-accent-500/30"
+        handleClassName="!w-5 !h-5 !bg-white dark:!bg-gray-800 !border-2 !border-accent-500 dark:!border-accent-400 !rounded-full !opacity-100 !transition-all !duration-200 hover:!scale-125 hover:!border-accent-600 dark:hover:!border-accent-300"
         handleStyle={{
-          width: '12px',
-          height: '12px',
+          width: '20px',
+          height: '20px',
           borderRadius: '50%',
           backgroundColor: 'white',
-          border: '2px solid rgba(156, 163, 175, 0.6)',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+          border: '2px solid #fbbf24',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15), 0 0 0 4px rgba(251, 191, 36, 0.1)',
           cursor: 'nwse-resize',
         }}
       />
       <div
-        className="bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-8 w-full h-full relative group transition-all duration-300 ease-out overflow-hidden flex flex-col"
+        className={`
+          ${colorConfig.background}
+          border-2
+          ${isEditing ? 'border-accent-500 dark:border-accent-400' : colorConfig.border}
+          ${!isEditing && colorConfig.hover}
+          rounded-2xl p-8 w-full h-full relative group transition-all duration-200 ease-out overflow-hidden flex flex-col
+        `}
         style={{
           willChange: 'transform, box-shadow',
           transform: 'translate3d(0, 0, 0)',
-          boxShadow: '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
+          boxShadow: isEditing
+            ? '0 0 0 3px rgba(251, 191, 36, 0.1), 0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 8px 20px -4px rgba(0, 0, 0, 0.15)'
+            : '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'translate3d(0, -4px, 0)'
-          e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 12px 24px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06)'
+          if (!isEditing) {
+            e.currentTarget.style.transform = 'translate3d(0, -2px, 0)'
+            e.currentTarget.style.boxShadow = '0 -1px 2px 0 rgba(255, 255, 255, 0.15) inset, 0 8px 16px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.06)'
+          }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
-          e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+          if (!isEditing) {
+            e.currentTarget.style.transform = 'translate3d(0, 0, 0)'
+            e.currentTarget.style.boxShadow = '0 -1px 1px 0 rgba(255, 255, 255, 0.1) inset, 0 4px 8px -2px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04)'
+          }
         }}
       >
       {/* Connection handles - Only show on hover for reduced clutter */}
@@ -200,17 +348,21 @@ const NoteNode = memo(({ data }: { data: any }) => {
                 handleTitleBlur()
               }
             }}
-            className="font-display font-semibold text-xl flex-1 text-gray-900 dark:text-gray-100 tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1"
+            className="font-display font-semibold text-xl flex-1 text-gray-900 dark:text-gray-100 tracking-tight bg-transparent border-none outline-none focus:outline-none px-1"
           />
         ) : (
           <h4
-            className="font-display font-semibold text-xl line-clamp-3 flex-1 text-gray-900 dark:text-gray-100 tracking-tight cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors"
+            className="font-display font-semibold text-xl line-clamp-3 flex-1 text-gray-900 dark:text-gray-100 tracking-tight cursor-text px-1 py-0.5"
             onClick={handleTitleClick}
           >
             {title || 'Untitled'}
           </h4>
         )}
         <div className="flex gap-1 ml-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex-shrink-0">
+          <NoteColorPicker
+            currentColor={noteColor as NoteColorId}
+            onChange={handleColorChange}
+          />
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -238,6 +390,15 @@ const NoteNode = memo(({ data }: { data: any }) => {
           <TagDisplay tagIds={data.tags} maxDisplay={2} />
         </div>
       )}
+      
+      {/* Formatting Toolbar - Only show when editing content and note is large enough */}
+      {showToolbar && (
+        <CanvasFormattingToolbar
+          onFormat={handleFormat}
+          onDone={handleDoneEditing}
+        />
+      )}
+      
       <div className="flex-1 flex flex-col overflow-hidden">
         {isEditingContent ? (
           <textarea
@@ -246,12 +407,13 @@ const NoteNode = memo(({ data }: { data: any }) => {
             onChange={(e) => setContent(e.target.value)}
             onBlur={handleContentBlur}
             onClick={(e) => e.stopPropagation()}
-            className="text-base text-gray-600 dark:text-gray-300 leading-relaxed flex-1 bg-transparent border-none outline-none focus:ring-2 focus:ring-accent-400 rounded px-1 resize-none"
+            onKeyDown={handleKeyDown}
+            className="text-base text-gray-600 dark:text-gray-300 leading-relaxed flex-1 bg-transparent border-none outline-none focus:outline-none px-1 resize-none"
             placeholder="Click to add content..."
           />
         ) : (
           <p
-            className="text-base text-gray-600 dark:text-gray-300 line-clamp-5 leading-relaxed flex-1 cursor-text hover:bg-gray-50 dark:hover:bg-gray-800 rounded px-1 py-0.5 transition-colors relative"
+            className="text-base text-gray-600 dark:text-gray-300 line-clamp-5 leading-relaxed flex-1 cursor-text px-1 py-0.5 relative"
             style={{
               maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
               WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)'
@@ -326,6 +488,18 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
     }
   }, [notes])
 
+  // Handle note color change
+  const handleNoteColorChange = useCallback(async (noteId: string, color: NoteColorId) => {
+    try {
+      await db.notes.update(noteId, {
+        color: color,
+        updatedAt: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('Failed to update note color:', error)
+    }
+  }, [])
+
   // Convert notes to React Flow nodes with proper validation
   const initialNodes: Node[] = useMemo(
     () =>
@@ -347,9 +521,11 @@ function CanvasViewInner({ notes, onEditNote, onDeleteNote, onViewportCenterChan
             content: note.content,
             tags: note.tags,
             updatedAt: note.updatedAt,
+            color: note.color || 'default',
             onEdit: () => onEditNote(note),
             onDelete: () => onDeleteNote(note.id),
             onUpdate: (updates: { title?: string; content?: string }) => handleNoteUpdate(note.id, updates),
+            onColorChange: (color: NoteColorId) => handleNoteColorChange(note.id, color),
           },
         }
       }),

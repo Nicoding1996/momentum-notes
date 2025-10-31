@@ -1169,3 +1169,61 @@
   padding: 1px 3px;
   border-radius: 3px;
 }
+
+/* ============================================ */
+/* Canvas Formatting Toolbar Styles */
+/* ============================================ */
+
+.toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: rgb(75 85 99);
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.dark .toolbar-button {
+  color: rgb(156 163 175);
+}
+
+.toolbar-button:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgb(31 41 55);
+}
+
+.dark .toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgb(229 231 235);
+}
+
+.toolbar-button:active {
+  transform: scale(0.95);
+}
+
+.toolbar-button-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgb(59 130 246);
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.toolbar-button-primary:hover {
+  background: rgb(37 99 235);
+}
+
+.toolbar-button-primary:active {
+  transform: scale(0.95);
+}

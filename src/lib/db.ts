@@ -36,6 +36,24 @@ class NotesDB extends Dexie {
       tags: 'id, name, usageCount',
       wikilinks: 'id, sourceNoteId, targetNoteId, targetTitle, [sourceNoteId+targetTitle]', // compound index for fast lookups
     });
+    // Version 6: Add color field to notes (no schema change needed, just migration)
+    this.version(6).stores({
+      notes: 'id, updatedAt, createdAt, *tags',
+      edges: 'id, source, target, createdAt, relationshipType',
+      tags: 'id, name, usageCount',
+      wikilinks: 'id, sourceNoteId, targetNoteId, targetTitle, [sourceNoteId+targetTitle]',
+    }).upgrade(async (trans) => {
+      // Add default color to existing notes that don't have one
+      const notes = await trans.table('notes').toArray();
+      await Promise.all(
+        notes.map(note => {
+          if (!note.color) {
+            return trans.table('notes').update(note.id, { color: 'default' });
+          }
+          return Promise.resolve();
+        })
+      );
+    });
   }
 }
 
