@@ -912,3 +912,108 @@
     font-size: 0.95rem;
   }
 }
+
+/* ============================================ */
+/* Backlinks Panel Styles */
+/* ============================================ */
+
+/* Backlinks Panel Container */
+.backlinks-panel {
+  border-top: 1px solid rgb(229 231 235);
+  background: rgb(249 250 251);
+  max-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dark .backlinks-panel {
+  border-top-color: rgb(55 65 81);
+  background: rgb(31 41 55);
+}
+
+/* Header */
+.backlinks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms;
+  font-size: 0.875rem;
+  color: rgb(55 65 81);
+}
+
+.dark .backlinks-header {
+  color: rgb(209 213 219);
+}
+
+.backlinks-header:hover {
+  background: rgb(243 244 246);
+}
+
+.dark .backlinks-header:hover {
+  background: rgb(55 65 81);
+}
+
+/* Content Area */
+.backlinks-content {
+  padding: 0 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Empty State */
+.backlinks-empty {
+  padding: 32px 16px;
+  text-align: center;
+}
+
+/* Individual Backlink Item */
+.backlink-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid rgb(229 231 235);
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.dark .backlink-item {
+  background: rgb(17 24 39);
+  border-color: rgb(55 65 81);
+}
+
+.backlink-item:hover {
+  background: rgb(239 246 255);
+  border-color: rgb(191 219 254);
+  transform: translateX(2px);
+}
+
+.dark .backlink-item:hover {
+  background: rgb(30 58 138);
+  border-color: rgb(29 78 216);
+}
+
+.backlink-item:focus {
+  outline: 2px solid rgb(59 130 246);
+  outline-offset: 2px;
+}
+
+/* Relationship Badge */
+.relationship-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Highlight in context */
+.backlinks-content mark {
+  padding: 1px 3px;
+  border-radius: 3px;
+}

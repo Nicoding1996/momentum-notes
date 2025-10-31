@@ -17,6 +17,7 @@ import { AIChatPanel } from '@/components/AIChatPanel'
 import { TextContextMenu } from '@/components/ui/TextContextMenu'
 import { WikilinkExtension } from '@/extensions/WikilinkExtension'
 import { WikilinkAutocomplete } from '@/components/WikilinkAutocomplete'
+import { BacklinksPanel } from '@/components/BacklinksPanel'
 import { findNoteByTitle, scanAndSyncWikilinks } from '@/lib/wikilink-sync'
 
 interface NoteEditorProps {
@@ -867,19 +868,33 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
             </div>
           )}
 
-          {/* WYSIWYG Editor Content */}
-          <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
-            <EditorContent editor={editor} className="editor-content-enhanced" />
+          {/* WYSIWYG Editor Content with Sidebar */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Editor (left side) */}
+            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
+              <EditorContent editor={editor} className="editor-content-enhanced" />
+              
+              {/* Wikilink Autocomplete */}
+              {autocompleteState?.active && (
+                <WikilinkAutocomplete
+                  query={autocompleteState.query}
+                  position={autocompleteState.position}
+                  onSelect={handleAutocompleteSelect}
+                  onClose={() => setAutocompleteState(null)}
+                  excludeNoteId={note.id}
+                />
+              )}
+            </div>
             
-            {/* Wikilink Autocomplete */}
-            {autocompleteState?.active && (
-              <WikilinkAutocomplete
-                query={autocompleteState.query}
-                position={autocompleteState.position}
-                onSelect={handleAutocompleteSelect}
-                onClose={() => setAutocompleteState(null)}
-                excludeNoteId={note.id}
-              />
+            {/* Sidebar (right side) - Hidden in focus mode */}
+            {!isFocusMode && (
+              <div className="w-80 flex-shrink-0 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+                <BacklinksPanel
+                  currentNoteId={note.id}
+                  currentNoteTitle={title}
+                  onNavigateToNote={handleNavigateToNote}
+                />
+              </div>
             )}
           </div>
 
