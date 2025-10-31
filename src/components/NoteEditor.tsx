@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import UnderlineExtension from '@tiptap/extension-underline'
@@ -10,7 +10,7 @@ import type { Note } from '@/types/note'
 import { db } from '@/lib/db'
 import { useChromeAI } from '@/hooks/useChromeAI'
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription'
-import { useTextSelection } from '@/hooks/useTextSelection'
+// import { useTextSelection } from '@/hooks/useTextSelection'
 import { useToast } from '@/contexts/ToastContext'
 import { TagInput } from '@/components/ui/TagInput'
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal'
@@ -215,6 +215,34 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
       attributes: {
         class: 'editor-textarea w-full min-h-[500px] bg-transparent border-none outline-none focus:ring-0 text-lg leading-relaxed text-gray-900 dark:text-gray-100 prose prose-lg sm:prose-lg lg:prose-xl xl:prose-2xl focus:outline-none max-w-none',
       },
+      handleDOMEvents: {
+        contextmenu: (view: any, event: MouseEvent) => {
+          // Get current selection
+          const { state } = view
+          const { from, to } = state.selection
+          const text = state.doc.textBetween(from, to, ' ')
+          
+          // Only show menu if text is selected
+          if (text.trim().length === 0) {
+            return false // Let default context menu show
+          }
+          
+          event.preventDefault()
+          
+          // Store selection state
+          setSelectedText(text.trim())
+          setSelectionRange({ from, to })
+          
+          // Calculate menu position
+          setContextMenuState({
+            isOpen: true,
+            x: event.clientX,
+            y: event.clientY
+          })
+          
+          return true // Prevent default
+        }
+      }
     },
   })
 
@@ -303,15 +331,35 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     }
   }, [editor, note.id])
 
-  // Text selection (for AI context menu - still used)
-  const {
-    selectedText,
-    contextMenuState,
-    closeContextMenu,
-    replaceSelection
-  } = useTextSelection({
-    elementRef: textareaRef
+  // Text selection state for AI context menu (Tiptap-compatible)
+  const [selectedText, setSelectedText] = useState('')
+  const [selectionRange, setSelectionRange] = useState<{ from: number; to: number } | null>(null)
+  const [contextMenuState, setContextMenuState] = useState({
+    isOpen: false,
+    x: 0,
+    y: 0
   })
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenuState({ isOpen: false, x: 0, y: 0 })
+  }, [])
+
+  const replaceSelection = useCallback((newText: string) => {
+    if (!editor || !selectionRange) return
+    
+    const { from, to } = selectionRange
+    
+    // Replace selected text with new text
+    editor.chain()
+      .focus()
+      .setTextSelection({ from, to })
+      .insertContent(newText)
+      .run()
+    
+    // Clear selection state
+    setSelectedText('')
+    setSelectionRange(null)
+  }, [editor, selectionRange])
 
   // Voice transcription - updated to work with Tiptap editor with live display
   const handleTranscript = (text: string, isFinal: boolean) => {
@@ -587,7 +635,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     try {
       setContentHistory(prev => [...prev, content])
       const expanded = await expandText(selectedText, `This is part of a note titled: ${title}`)
-      replaceSelection(expanded, setContent)
+      replaceSelection(expanded)
       closeContextMenu()
       
       showToast('Text expanded successfully', 'success', 2000)
@@ -606,7 +654,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     try {
       setContentHistory(prev => [...prev, content])
       const summary = await summarizeText(selectedText, 'tl;dr')
-      replaceSelection(summary, setContent)
+      replaceSelection(summary)
       closeContextMenu()
       
       showToast('Text summarized successfully', 'success', 2000)
@@ -625,7 +673,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
     try {
       setContentHistory(prev => [...prev, content])
       const improved = await improveWriting(selectedText)
-      replaceSelection(improved, setContent)
+      replaceSelection(improved)
       closeContextMenu()
       
       showToast('Text improved successfully', 'success', 2000)
