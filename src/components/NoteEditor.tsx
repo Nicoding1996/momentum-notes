@@ -907,68 +907,78 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           {/* Formatting Toolbar - Always visible */}
           {!isFocusMode && (
             <div className="border-b border-gray-200/60 dark:border-gray-800/60 px-4 sm:px-6 py-2 bg-gray-50/50 dark:bg-gray-900/50">
-              <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-0.5 sm:gap-1 flex-wrap">
+                  <button
+                    onClick={handleBold}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Bold (Ctrl+B)"
+                    aria-label="Bold"
+                  >
+                    <Bold className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleItalic}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Italic (Ctrl+I)"
+                    aria-label="Italic"
+                  >
+                    <Italic className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleUnderline}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Underline (Ctrl+U)"
+                    aria-label="Underline"
+                  >
+                    <Underline className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleStrikethrough}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Strikethrough"
+                    aria-label="Strikethrough"
+                  >
+                    <Strikethrough className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                  
+                  <button
+                    onClick={handleBulletList}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Bullet List"
+                    aria-label="Bullet List"
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={handleNumberedList}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Numbered List"
+                    aria-label="Numbered List"
+                  >
+                    <ListOrdered className="w-4 h-4" />
+                  </button>
+                  
+                  <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+                  
+                  <button
+                    onClick={handleInsertImage}
+                    className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                    title="Insert Image"
+                    aria-label="Insert Image"
+                  >
+                    <Image className="w-4 h-4" />
+                  </button>
+                </div>
                 <button
-                  onClick={handleBold}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Bold (Ctrl+B)"
-                  aria-label="Bold"
+                  onClick={() => setIsFocusMode(true)}
+                  className="btn btn-ghost text-xs px-3 py-1.5"
+                  title="Enter Focus Mode (Esc to exit)"
                 >
-                  <Bold className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleItalic}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Italic (Ctrl+I)"
-                  aria-label="Italic"
-                >
-                  <Italic className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleUnderline}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Underline (Ctrl+U)"
-                  aria-label="Underline"
-                >
-                  <Underline className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleStrikethrough}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Strikethrough"
-                  aria-label="Strikethrough"
-                >
-                  <Strikethrough className="w-4 h-4" />
-                </button>
-                
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
-                
-                <button
-                  onClick={handleBulletList}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Bullet List"
-                  aria-label="Bullet List"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleNumberedList}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Numbered List"
-                  aria-label="Numbered List"
-                >
-                  <ListOrdered className="w-4 h-4" />
-                </button>
-                
-                <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
-                
-                <button
-                  onClick={handleInsertImage}
-                  className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
-                  title="Insert Image"
-                  aria-label="Insert Image"
-                >
-                  <Image className="w-4 h-4" />
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  Focus
                 </button>
               </div>
             </div>
@@ -1047,18 +1057,7 @@ export function NoteEditor({ note, onClose, onNavigateToNote }: NoteEditorProps)
           {/* WYSIWYG Editor Content with Sidebar */}
           <div className="flex flex-1 overflow-hidden">
             {/* Editor (left side) */}
-            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''} relative`}>
-              {/* Focus Mode Button - Floating on editor */}
-              {!isFocusMode && (
-                <button
-                  onClick={() => setIsFocusMode(true)}
-                  className="absolute top-4 right-4 btn btn-ghost text-xs px-3 py-1.5 shadow-sm z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-900"
-                  title="Enter Focus Mode (Esc to exit)"
-                >
-                  <Maximize2 className="w-3.5 h-3.5" />
-                  Focus
-                </button>
-              )}
+            <div className={`flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 custom-scrollbar ${isFocusMode ? 'pt-24 sm:pt-28' : ''}`}>
               <EditorContent editor={editor} className="editor-content-enhanced" />
               
               {/* Wikilink Autocomplete */}
